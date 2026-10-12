@@ -1,0 +1,88 @@
+.search {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.search__input {
+  display: flex;
+  flex: none;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+}
+.search__input .search-field {
+  flex: 1;
+  border-bottom: 0;
+  padding: 0 var(--space-4);
+}
+.search__close {
+  display: none;
+  margin-right: var(--space-2);
+}
+:root[data-layout='mobile'] .search__close {
+  display: inline-flex;
+}
+.search__filters {
+  flex: none;
+  padding: var(--space-3) var(--space-4) 0;
+}
+.search__label {
+  flex: none;
+  padding: var(--space-3) var(--space-4) var(--space-1);
+}
+.search__results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--space-2) var(--space-2);
+  overscroll-behavior: contain;
+}
+.search__result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--space-2);
+  border-radius: var(--radius-m);
+  text-align: left;
+}
+.search__result[data-active='true'] {
+  background: var(--color-surface-2);
+}
+.search__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.search__title {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search__excerpt {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-s);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search__meta {
+  flex: none;
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+}
+.search__enter {
+  flex: none;
+  color: var(--color-text-faint);
+  opacity: 0;
+}
+.search__result[data-active='true'] .search__enter {
+  opacity: 1;
+}
+/* 좁은 화면에서는 제목과 요약에 폭을 양보한다 */
+:root[data-layout='mobile'] :is(.search__enter, .search__meta) {
+  display: none;
+}

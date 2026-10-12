@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>별 줍기</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #12142b;
+        font-family: system-ui, sans-serif;
+        touch-action: none;
+        user-select: none;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <script>
+      // H Archive 샘플 게임: 떨어지는 별을 바구니로 받는다.
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const LIVES = 3;
+      let width = 0;
+      let height = 0;
+      let basketX = 0;
+      let stars = [];
+      let score = 0;
+      let lives = LIVES;
+      let spawnTimer = 0;
+      let lastTime = 0;
+      let over = false;
+
+      function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+        basketX = Math.min(Math.max(basketX || width / 2, 0), width);
+      }
+
+      function reset() {
+        stars = [];
+        score = 0;
+        lives = LIVES;
+        spawnTimer = 0;
+        over = false;
+      }
+
+      function drawStar(x, y, radius) {
+        ctx.beginPath();
+        for (let i = 0; i < 10; i += 1) {
+          const angle = (Math.PI / 5) * i - Math.PI / 2;
+          const r = i % 2 ? radius / 2 : radius;
+          ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function frame(time) {
+        const dt = Math.min(0.05, (time - lastTime) / 1000 || 0);
+        lastTime = time;
+        const basketWidth = Math.max(70, width * 0.16);
+        const basketY = height - 46;
+
+        if (!over) {
+          spawnTimer -= dt;
+          if (spawnTimer <= 0) {
+            stars.push({ x: 20 + Math.random() * (width - 40), y: -20, speed: 140 + Math.random() * 120 + score * 4 });
+            spawnTimer = Math.max(0.35, 1 - score * 0.02);
+          }
+          for (const star of stars) star.y += star.speed * dt;
+          stars = stars.filter((star) => {
+            if (star.y > basketY - 12 && star.y < basketY + 16 && Math.abs(star.x - basketX) < basketWidth / 2) {
+              score += 1;
+              return false;
+            }
+            if (star.y > height + 20) {
+              lives -= 1;
+              return false;
+            }
+            return true;
+          });
+          if (lives <= 0) over = true;
+        }
+
+        ctx.fillStyle = '#12142b';
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = '#ffd66b';
+        for (const star of stars) drawStar(star.x, star.y, 13);
+        ctx.fillStyle = '#8f9bff';
+        ctx.beginPath();
+        ctx.roundRect(basketX - basketWidth / 2, basketY, basketWidth, 18, 9);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '600 18px system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('점수 ' + score, 16, 30);
+        ctx.textAlign = 'right';
+        ctx.fillText('♥'.repeat(Math.max(0, lives)), width - 16, 30);
+
+        if (over) {
+          ctx.textAlign = 'center';
+          ctx.font = '700 28px system-ui, sans-serif';
+          ctx.fillText('게임 오버 · ' + score + '점', width / 2, height / 2 - 8);
+          ctx.font = '500 16px system-ui, sans-serif';
+          ctx.fillText('눌러서 다시 시작', width / 2, height / 2 + 24);
+        }
+        requestAnimationFrame(frame);
+      }
+
+      window.addEventListener('resize', resize);
+      window.addEventListener('pointermove', (event) => {
+        basketX = event.clientX;
+      });
+      window.addEventListener('pointerdown', (event) => {
+        basketX = event.clientX;
+        if (over) reset();
+      });
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') basketX = Math.max(0, basketX - 40);
+        if (event.key === 'ArrowRight') basketX = Math.min(width, basketX + 40);
+        if (over && (event.key === ' ' || event.key === 'Enter')) reset();
+      });
+
+      resize();
+      requestAnimationFrame(frame);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,114 @@
+/*
+ * 디자인 토큰.
+ * - 타입 색상(--type-*)과 모션(--motion-*, --ease-*)은 config 에서 주입된다 (styles/injectTokens.ts).
+ * - 레이아웃 분기는 <html data-layout> 로 한다 (config/breakpoints.ts).
+ */
+:root {
+  color-scheme: light;
+
+  --color-bg: #f5f5f2;
+  --color-surface: #ffffff;
+  --color-surface-2: #efefeb;
+  --color-surface-3: #e5e5e0;
+  --color-border: #e1e1dc;
+  --color-border-strong: #cdcdc6;
+  --color-text: #1e2024;
+  --color-text-muted: #636770;
+  --color-text-faint: #979aa2;
+  --color-accent: #4f5fd6;
+  --color-accent-contrast: #ffffff;
+  --color-accent-soft: rgba(79, 95, 214, 0.12);
+  --color-danger: #cf4545;
+  --color-danger-soft: rgba(207, 69, 69, 0.1);
+  --color-overlay: rgba(22, 23, 28, 0.42);
+  --color-graph-link: #cfcfc8;
+
+  --shadow-1: 0 1px 2px rgba(20, 22, 30, 0.06);
+  --shadow-2: 0 6px 20px rgba(20, 22, 30, 0.1);
+  --shadow-3: 0 18px 48px rgba(20, 22, 30, 0.18);
+
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  --text-xs: 12px;
+  --text-s: 13px;
+  --text-m: 14px;
+  --text-l: 16px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+
+  --size-sidebar: 264px;
+  --size-inspector: 340px;
+  --size-topbar: 52px;
+  --size-bottomnav: 60px;
+  --size-control: 34px;
+  --size-row: 32px;
+  --size-touch: 44px;
+  --size-card-min: 210px;
+  --size-reading: 760px;
+
+  --page-padding: var(--space-6);
+
+  --z-panel: 20;
+  --z-sheet: 30;
+  /* BottomSheet 는 하단 내비게이션 뒤에서 올라온다 */
+  --z-nav: 35;
+  --z-overlay: 40;
+  --z-modal: 60;
+  --z-toast: 80;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #15161a;
+  --color-surface: #1c1e23;
+  --color-surface-2: #25272e;
+  --color-surface-3: #2f323a;
+  --color-border: #2c2f37;
+  --color-border-strong: #3d414b;
+  --color-text: #e7e8eb;
+  --color-text-muted: #a0a4ae;
+  --color-text-faint: #6d717b;
+  --color-accent: #8591f5;
+  --color-accent-contrast: #14151a;
+  --color-accent-soft: rgba(133, 145, 245, 0.16);
+  --color-danger: #ef7070;
+  --color-danger-soft: rgba(239, 112, 112, 0.14);
+  --color-overlay: rgba(0, 0, 0, 0.56);
+  --color-graph-link: #3a3d46;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.36);
+  --shadow-3: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-layout='tablet'] {
+  --size-sidebar: 232px;
+}
+
+/* 모바일은 터치 기준으로 컨트롤을 키운다 */
+:root[data-layout='mobile'] {
+  --size-control: 40px;
+  --size-row: 44px;
+  --size-card-min: 150px;
+  --text-m: 15px;
+  --text-s: 14px;
+  --page-padding: var(--space-4);
+}

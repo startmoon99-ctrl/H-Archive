@@ -1,0 +1,369 @@
+/* ───── Button ───── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--size-control);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  font-size: var(--text-s);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    transform var(--motion-fast);
+}
+.btn:hover {
+  background: var(--color-surface-2);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.btn--primary {
+  border-color: transparent;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+.btn--primary:hover {
+  background: color-mix(in srgb, var(--color-accent) 88%, var(--color-text));
+}
+.btn--ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.btn--danger {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-danger);
+}
+.btn--danger:hover,
+.btn--danger[data-confirming='true'] {
+  background: var(--color-danger-soft);
+}
+
+.link-btn {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-btn:hover {
+  color: var(--color-text);
+}
+
+/* ───── IconButton ───── */
+.icon-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-control);
+  height: var(--size-control);
+  border-radius: var(--radius-m);
+  color: var(--color-text-muted);
+  transition:
+    background-color var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
+}
+.icon-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+.icon-btn:active {
+  transform: scale(0.94);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.icon-btn[aria-pressed='true'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+.icon-btn--s {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-s);
+}
+:root[data-layout='mobile'] .icon-btn--s {
+  width: 36px;
+  height: 36px;
+}
+
+/* ───── TypeIcon / TypeBadge ───── */
+.type-icon {
+  flex: none;
+  color: var(--type-color);
+}
+.type-icon--boxed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--type-color) 14%, transparent);
+}
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--type-color) 14%, transparent);
+  color: var(--type-color);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+/* ───── TagChip ───── */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  transition:
+    background-color var(--motion-fast),
+    color var(--motion-fast);
+}
+button.tag-chip:hover,
+.tag-chip__label:hover {
+  color: var(--color-text);
+}
+button.tag-chip:hover {
+  background: var(--color-surface-3);
+}
+.tag-chip[data-active='true'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+.tag-chip__count {
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.tag-chip__remove {
+  display: inline-flex;
+  margin-right: -4px;
+  padding: 3px;
+  border-radius: var(--radius-full);
+}
+.tag-chip__remove:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+}
+:root[data-layout='mobile'] .tag-chip {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-s);
+}
+
+/* ───── ItemRow ───── */
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--radius-s);
+  transition: background-color var(--motion-fast);
+}
+.item-row:hover {
+  background: var(--color-surface-2);
+}
+.item-row[data-active='true'] {
+  background: var(--color-accent-soft);
+}
+.item-row__main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--size-row);
+  padding: 0 var(--space-2);
+  text-align: left;
+}
+.item-row__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-s);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-row[data-active='true'] .item-row__title {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.item-row__meta {
+  flex: none;
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+}
+.item-row__trailing {
+  display: flex;
+  flex: none;
+  padding-right: 2px;
+  opacity: 0;
+  transition: opacity var(--motion-fast);
+}
+.item-row:hover .item-row__trailing,
+.item-row:focus-within .item-row__trailing {
+  opacity: 1;
+}
+/* hover 가 없는 터치 기기에서는 항상 보여 준다 (화면 크기가 아니라 입력 방식 기준) */
+@media (hover: none) {
+  .item-row__trailing {
+    opacity: 1;
+  }
+}
+
+/* ───── SearchField ───── */
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--size-control);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  transition: border-color var(--motion-fast);
+}
+.search-field:focus-within {
+  border-color: var(--color-accent);
+}
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--color-text);
+}
+.search-field input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-field--large {
+  height: 52px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: none;
+  font-size: var(--text-l);
+}
+
+/* ───── TypeFilter ───── */
+.type-filter {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.type-filter::-webkit-scrollbar {
+  display: none;
+}
+.type-filter__chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 var(--space-3) 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  transition:
+    color var(--motion-fast),
+    border-color var(--motion-fast),
+    opacity var(--motion-fast),
+    transform var(--motion-fast);
+}
+.type-filter__chip:active {
+  transform: scale(0.96);
+}
+.type-filter__chip[aria-pressed='true'] {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+.type-filter__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-faint);
+  opacity: 0.5;
+  transition:
+    background-color var(--motion-fast),
+    opacity var(--motion-fast);
+}
+.type-filter__chip[aria-pressed='true'] .type-filter__dot {
+  background: var(--type-color);
+  opacity: 1;
+}
+.type-filter__count {
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+:root[data-layout='mobile'] .type-filter__chip {
+  height: 36px;
+  font-size: var(--text-s);
+}
+
+/* ───── EmptyState ───── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 220px;
+  padding: var(--space-8) var(--space-4);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+.empty-state__icon {
+  color: var(--color-text-faint);
+}
+.empty-state__title {
+  color: var(--color-text);
+  font-size: var(--text-l);
+  font-weight: 600;
+}
+.empty-state__action {
+  margin-top: var(--space-3);
+}
+
+/* ───── 공용 텍스트 ───── */
+.section-label {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.count-badge {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
