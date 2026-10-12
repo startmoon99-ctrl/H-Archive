@@ -1,0 +1,52 @@
+.reveal {
+  opacity: 0;
+  transition:
+    opacity var(--dur-slow) var(--ease-enter),
+    transform var(--dur-slow) var(--ease-enter),
+    filter var(--dur-slow) var(--ease-enter),
+    clip-path var(--dur-slow) var(--ease-cinematic);
+  transition-delay: calc(var(--reveal-index, 0) * var(--stagger));
+}
+
+.reveal[data-variant='rise'] {
+  transform: translateY(var(--reveal-distance));
+}
+
+.reveal[data-variant='blur'] {
+  transform: scale(var(--reveal-scale));
+  filter: blur(var(--reveal-blur));
+}
+
+.reveal[data-variant='mask'] {
+  transform: translateY(var(--reveal-distance));
+  clip-path: inset(0 0 100% 0);
+}
+
+.reveal[data-revealed='true'] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  clip-path: inset(0 0 0 0);
+}
+
+/*
+ * .enter: 화면에 놓이는 순간 한 번 떠오른다(스크롤과 무관).
+ * 묶음은 --enter-base로 시작 시점을, 각 줄은 --enter-index로 순서를 정한다.
+ */
+.enter {
+  animation: enter-rise var(--dur-slow) var(--ease-enter) both;
+  animation-delay: calc(var(--enter-base, 0ms) + var(--enter-index, 0) * var(--stagger));
+}
+
+@keyframes enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--reveal-distance));
+    filter: blur(var(--reveal-blur));
+  }
+}
+
+/* 움직임 최소화: 마스크로 가리지 않고 투명도만 바꾼다 */
+:root[data-motion='minimal'] .reveal[data-variant='mask'] {
+  clip-path: none;
+}

@@ -1,0 +1,152 @@
+.dialog {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  display: flex;
+}
+
+.dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--color-backdrop);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+.dialog__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+  outline: none;
+  opacity: 0;
+  transition:
+    opacity var(--dur-base) var(--ease-enter),
+    transform var(--dur-base) var(--ease-enter);
+}
+
+.dialog[data-state='open'] .dialog__backdrop,
+.dialog[data-state='open'] .dialog__panel {
+  opacity: 1;
+}
+
+/* [data-variant]를 붙여 아래 variant별 닫힌 상태(transform)보다 우선하게 한다 */
+.dialog[data-state='open'][data-variant] .dialog__panel {
+  transform: none;
+}
+
+.dialog__header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-3) var(--space-5);
+}
+
+.dialog__title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.dialog__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-height: 0;
+  padding: var(--space-3) var(--space-5) var(--space-5);
+}
+
+.dialog__footer {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) calc(var(--space-4) + var(--safe-bottom));
+  border-top: 1px solid var(--color-line);
+}
+
+/* 가운데 입력 창 */
+.dialog[data-variant='modal'] {
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.dialog[data-variant='modal'] .dialog__panel {
+  width: min(100%, var(--dialog-width));
+  max-height: 100%;
+  border-radius: var(--radius-lg);
+  transform: translateY(calc(var(--reveal-distance) * 0.6)) scale(var(--reveal-scale));
+}
+
+/* 옆에서 나오는 패널 */
+.dialog[data-variant='drawer'] {
+  justify-content: flex-end;
+}
+
+.dialog[data-variant='drawer'] .dialog__panel {
+  width: min(100%, var(--drawer-width));
+  border-width: 0 0 0 1px;
+  opacity: 1;
+  transform: translateX(100%);
+}
+
+/* 검색 */
+.dialog[data-variant='palette'] {
+  align-items: flex-start;
+  justify-content: center;
+  padding: 14vh var(--space-4) var(--space-4);
+}
+
+.dialog[data-variant='palette'] .dialog__panel {
+  width: min(100%, var(--palette-width));
+  max-height: 100%;
+  border-radius: var(--radius-lg);
+  transform: translateY(calc(var(--reveal-distance) * -0.5)) scale(var(--reveal-scale));
+}
+
+/* 전체 화면 */
+.dialog[data-variant='viewer'] .dialog__backdrop {
+  background: rgb(2 3 9 / 0.94);
+}
+
+.dialog[data-variant='viewer'] .dialog__panel {
+  flex: 1;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  transform: scale(var(--reveal-scale));
+}
+
+/* 모바일: Bottom Sheet */
+:root[data-layout='mobile'] .dialog:is([data-variant='modal'], [data-variant='drawer']) {
+  align-items: flex-end;
+  justify-content: stretch;
+  padding: 0;
+}
+
+:root[data-layout='mobile'] .dialog:is([data-variant='modal'], [data-variant='drawer']) .dialog__panel {
+  width: 100%;
+  max-height: 92dvh;
+  border-width: 1px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  opacity: 1;
+  transform: translateY(100%);
+}
+
+:root[data-layout='mobile'] .dialog[data-state='open'] .dialog__panel {
+  transform: none;
+}
+
+:root[data-layout='mobile'] .dialog[data-variant='palette'] {
+  padding: calc(var(--safe-top) + var(--space-3)) var(--space-3) var(--space-3);
+}

@@ -1,0 +1,96 @@
+.galaxy {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-galaxy);
+  /* hidden이 아니라 clip: 화면 밖의 항성계에 초점이 가도 브라우저가 이 영역을 스크롤하지 못하게 한다 */
+  overflow: clip;
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 45%,
+    var(--color-navy) 0%,
+    var(--color-space) 42%,
+    var(--color-void) 100%
+  );
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.galaxy[data-dragging='true'] {
+  cursor: grabbing;
+}
+
+/* 가장자리를 어둡게 눌러 시선을 가운데로 모은다 */
+.galaxy::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgb(2 3 9 / 0.7) 100%);
+  pointer-events: none;
+}
+
+.galaxy__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.galaxy__tilt {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity var(--dur-slow) var(--ease-standard),
+    scale var(--dur-slow) var(--ease-cinematic);
+}
+
+/* 인트로가 끝나기 전에는 항성계를 감춘다 */
+.galaxy[data-intro='playing'] .galaxy__tilt {
+  opacity: 0;
+}
+
+.galaxy[data-intro='revealing'] .galaxy__tilt {
+  transition-duration: var(--dur-cinematic);
+}
+
+/* 파일을 끌어오면 은하가 한발 물러나 자리를 내준다 */
+.galaxy[data-receiving='true'] .galaxy__tilt {
+  opacity: 0.35;
+  scale: 0.9;
+}
+
+/* 프로젝트 화면에 완전히 가려지면 그리지 않는다 */
+.galaxy[data-covered='true'] .galaxy__tilt {
+  visibility: hidden;
+}
+
+.galaxy__world {
+  --planet-scale: var(--mote-scale);
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+/* 은하 중심의 빛 */
+.galaxy__core {
+  --size: 1100px;
+
+  position: absolute;
+  left: calc(var(--size) / -2);
+  top: calc(var(--size) / -2);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(124 92 245 / calc(0.2 * var(--m-glow))) 0%,
+    rgb(79 131 255 / calc(0.07 * var(--m-glow))) 34%,
+    transparent 66%
+  );
+  pointer-events: none;
+}

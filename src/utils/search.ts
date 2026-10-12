@@ -1,76 +1,79 @@
-import { LIMITS } from '@/config/app';
-import type { ItemType } from '@/config/itemTypes';
-import type { ArchiveItem } from '@/types/archive';
-import { byUpdatedDesc } from './date';
-import { toPlainText } from './text';
+import type { Category, ID, Project } from '@/types/archive'
 
-const SCORE = {
-  titlePrefix: 10,
-  title: 6,
-  tagExact: 5,
-  tag: 3,
-  content: 1,
-} as const;
-
-export interface SearchOptions {
-  types?: ReadonlySet<ItemType>;
-  excludeIds?: ReadonlySet<string>;
-  limit?: number;
+export interface SearchResult {
+  type: 'category' | 'project'
+  id: ID
+  title: string
+  /** 어디에서 찾았는지 보여주는 한 줄 */
+  context: string
+  hue: number
 }
 
-function scoreToken(item: ArchiveItem, token: string, content: string): number {
-  // "#태그" 는 태그만 검색한다
-  if (token.startsWith('#')) {
-    const tag = token.slice(1);
-    if (!tag) return 0;
-    return item.tags.reduce((best, current) => {
-      const value = current.toLowerCase();
-      if (value === tag) return Math.max(best, SCORE.tagExact);
-      return value.includes(tag) ? Math.max(best, SCORE.tag) : best;
-    }, 0);
-  }
+/** 일치한 위치별 가중치. 제목이 가장 앞에 온다. */
+const WEIGHTS = { title: 100, tag: 60, description: 40, entryTitle: 30, memo: 20, tech: 20 }
+const SNIPPET_RADIUS = 28
 
-  let score = 0;
-  const title = item.title.toLowerCase();
-  if (title.startsWith(token)) score += SCORE.titlePrefix;
-  else if (title.includes(token)) score += SCORE.title;
-  for (const tag of item.tags) {
-    const value = tag.toLowerCase();
-    if (value === token) score += SCORE.tagExact;
-    else if (value.includes(token)) score += SCORE.tag;
-  }
-  if (content.includes(token)) score += SCORE.content;
-  return score;
+function normalize(text: string): string {
+  return text.trim().toLowerCase()
 }
 
-/** 검색어가 비어 있으면 최근 수정 순으로 돌려준다 */
-export function searchItems(items: ArchiveItem[], query: string, options: SearchOptions = {}): ArchiveItem[] {
-  const { types, excludeIds, limit = LIMITS.searchResults } = options;
-  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const candidates = items.filter(
-    (item) => (!types || types.has(item.type)) && (!excludeIds || !excludeIds.has(item.id)),
-  );
+function snippet(text: string, query: string): string {
+  const index = normalize(text).indexOf(query)
+  if (index < 0) return text
+  const start = Math.max(0, index - SNIPPET_RADIUS)
+  const end = Math.min(text.length, index + query.length + SNIPPET_RADIUS)
+  return `${start > 0 ? '…' : ''}${text.slice(start, end).trim()}${end < text.length ? '…' : ''}`
+}
 
-  if (!tokens.length) return [...candidates].sort(byUpdatedDesc).slice(0, limit);
-
-  const scored: { item: ArchiveItem; score: number }[] = [];
-  for (const item of candidates) {
-    const content = toPlainText(item.content).toLowerCase();
-    let total = 0;
-    let matchedAll = true;
-    for (const token of tokens) {
-      const score = scoreToken(item, token, content);
-      if (!score) {
-        matchedAll = false;
-        break;
-      }
-      total += score;
-    }
-    if (matchedAll) scored.push({ item, score: total });
+function matchProject(project: Project, query: string): { score: number; context: string } | null {
+  const has = (text: string) => normalize(text).includes(query)
+  let score = 0
+  let context = ''
+  const hit = (weight: number, text: string) => {
+    score += weight
+    if (!context) context = text
   }
 
-  return scored
-    .sort((a, b) => b.score - a.score || byUpdatedDesc(a.item, b.item))
-    .slice(0, limit)
-    .map((entry) => entry.item);
+  if (has(project.title)) hit(WEIGHTS.title, project.description)
+  const tag = project.tags.find(has)
+  if (tag) hit(WEIGHTS.tag, `#${tag}`)
+  if (has(project.description)) hit(WEIGHTS.description, snippet(project.description, query))
+  for (const entry of project.timeline) {
+    if (has(entry.title)) hit(WEIGHTS.entryTitle, `기록 · ${entry.title}`)
+    if (has(entry.memo)) hit(WEIGHTS.memo, `“${snippet(entry.memo, query)}”`)
+    const tech = entry.tech.find(has)
+    if (tech) hit(WEIGHTS.tech, `기술 · ${tech}`)
+  }
+  return score > 0 ? { score, context } : null
+}
+
+/** 검색어가 비어 있으면 빈 배열. 최근 항목 표시는 호출하는 쪽에서 정한다. */
+export function searchArchive(rawQuery: string, categories: Category[], projects: Project[], limit: number): SearchResult[] {
+  const query = normalize(rawQuery)
+  if (!query) return []
+  const hueOf = new Map(categories.map((category) => [category.id, category.hue]))
+
+  const categoryResults: SearchResult[] = categories
+    .filter((category) => normalize(category.name).includes(query))
+    .map((category) => ({
+      type: 'category',
+      id: category.id,
+      title: category.name,
+      context: category.description || '항성계',
+      hue: category.hue,
+    }))
+
+  const projectResults = projects
+    .map((project) => ({ project, match: matchProject(project, query) }))
+    .filter((item): item is { project: Project; match: { score: number; context: string } } => item.match !== null)
+    .sort((a, b) => b.match.score - a.match.score)
+    .map<SearchResult>(({ project, match }) => ({
+      type: 'project',
+      id: project.id,
+      title: project.title,
+      context: match.context,
+      hue: hueOf.get(project.categoryId) ?? 0,
+    }))
+
+  return [...categoryResults, ...projectResults].slice(0, limit)
 }

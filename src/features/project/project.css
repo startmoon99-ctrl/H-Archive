@@ -1,0 +1,60 @@
+/*
+ * 프로젝트 화면은 눌렀던 행성 자리(--origin)에서 원으로 열리고, 닫힐 때 그 자리로 돌아간다.
+ * 여는 전환은 카메라 이동과 같은 시간(travel), 닫는 전환은 더 짧게(slow) 한다.
+ */
+.project {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-project);
+  background:
+    radial-gradient(ellipse 90% 60% at 85% 0%, oklch(0.32 0.13 var(--hue, 280) / 0.5), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 0% 100%, oklch(0.26 0.11 calc(var(--hue, 280) - 40) / 0.4), transparent 70%),
+    var(--color-space);
+  clip-path: circle(0 at var(--origin-x) var(--origin-y));
+  transition: clip-path var(--dur-slow) var(--ease-cinematic);
+}
+
+.project[data-state='open'] {
+  clip-path: circle(150vmax at var(--origin-x) var(--origin-y));
+  transition-duration: var(--dur-travel);
+}
+
+/* 움직임 최소화: 원으로 여는 대신 투명도만 바꾼다 */
+:root[data-motion='minimal'] .project {
+  clip-path: none;
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-standard);
+}
+
+:root[data-motion='minimal'] .project[data-state='open'] {
+  opacity: 1;
+}
+
+/* 스크롤한 내용이 상단의 이름 · 버튼과 겹쳐 보이지 않게 위쪽을 어둡게 덮는다 */
+.project::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc(var(--hud-height) * 1.6 + var(--safe-top));
+  background: linear-gradient(to bottom, var(--color-space) 25%, transparent);
+  pointer-events: none;
+}
+
+.project__scroll {
+  height: 100%;
+  padding-bottom: var(--safe-bottom);
+}
+
+:root[data-ui='touch'] .project__scroll {
+  padding-bottom: calc(var(--dock-height) + var(--safe-bottom));
+}
+
+.project__missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  height: 100%;
+  color: var(--color-text-dim);
+}

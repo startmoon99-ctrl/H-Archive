@@ -1,0 +1,113 @@
+.hero {
+  /* 화면이 열리는 전환이 어느 정도 진행된 뒤에 내용이 떠오른다 */
+  --enter-base: calc(var(--dur-travel) * 0.4);
+
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: center;
+  gap: var(--space-8);
+  width: min(100%, var(--content-width));
+  min-height: 82dvh;
+  margin: 0 auto;
+  padding: calc(var(--hud-height) + var(--space-7)) var(--space-6) var(--space-7);
+}
+
+.hero__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.hero__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.hero__eyebrow span::before {
+  content: '·';
+  margin-right: var(--space-3);
+}
+
+.hero__category {
+  min-height: var(--tap-target);
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: oklch(0.85 0.1 var(--hue));
+  transition: text-shadow var(--dur-base) var(--ease-standard);
+}
+
+.hero__category:hover {
+  text-shadow: var(--glow-soft) oklch(0.7 0.18 var(--hue) / var(--m-glow));
+}
+
+.hero__title {
+  font-family: var(--font-memo);
+  font-size: clamp(2rem, 4.4vw, 3.6rem);
+  font-weight: 300;
+  line-height: 1.25;
+  text-wrap: balance;
+  word-break: keep-all;
+}
+
+.hero__description {
+  font-size: var(--text-lg);
+  color: var(--color-text-dim);
+  word-break: keep-all;
+}
+
+.hero__meta {
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero__tags,
+.hero__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* 대표 미디어: 마우스를 따라 기울고, 스크롤하면 천천히 뒤따라온다 */
+.hero__cover {
+  perspective: 1200px;
+  translate: 0 calc(var(--scroll, 0) * var(--parallax) * var(--m-intensity) * 1px);
+  cursor: zoom-in;
+}
+
+.hero__cover:disabled {
+  cursor: default;
+}
+
+.hero__cover .media-preview {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    var(--shadow-panel),
+    var(--glow-strong) oklch(0.6 0.18 var(--hue) / calc(0.28 * var(--m-glow)));
+  transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform var(--dur-base) var(--ease-enter);
+}
+
+:root:is([data-layout='mobile'], [data-layout='tablet']) .hero {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  min-height: 0;
+  padding-inline: var(--space-5);
+}
+
+/* 좁은 화면에서는 이미지를 먼저 보여준다 */
+:root:is([data-layout='mobile'], [data-layout='tablet']) .hero__cover {
+  order: -1;
+  translate: none;
+}

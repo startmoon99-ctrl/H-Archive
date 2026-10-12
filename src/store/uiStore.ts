@@ -1,92 +1,74 @@
-import { create } from 'zustand';
-import { GRAPH } from '@/config/graph';
-import type { ItemType } from '@/config/itemTypes';
-import type { ThemePreference } from '@/config/theme';
-import { preferencesService } from '@/services/preferencesService';
-import type { ItemDraft } from '@/types/archive';
+import { create } from 'zustand'
+import { LIMITS } from '@/config/app'
+import type { ID } from '@/types/archive'
+import type { DialogDescriptor, IntroPhase, Point, Toast } from '@/types/ui'
+import { createId } from '@/utils/id'
 
-interface EditorState {
-  open: boolean;
-  /** 열 때마다 증가 — 폼 상태를 새로 만들기 위한 key */
-  session: number;
-  itemId: string | null;
-  preset: Partial<ItemDraft> | null;
-}
-
-interface GraphUiState {
-  focusMode: boolean;
-  focusDepth: number;
-  hiddenTypes: ItemType[];
+/** 프로젝트로 들어갈 때의 출발점. 화면 좌표는 전환 효과에, world 좌표는 카메라 이동에 쓴다. */
+export interface TravelOrigin {
+  screen: Point
+  world: Point
 }
 
 interface UiState {
-  selectedId: string | null;
-  select(id: string | null): void;
+  dialog: DialogDescriptor | null
+  /**
+   * 추가 폼에 올라와 있는 파일. Drag & Drop은 폼이 열려 있는 중에도 일어나므로
+   * 폼 안이 아니라 여기에 두고, 창이 닫히면 비운다.
+   */
+  stagedFiles: File[]
+  introPhase: IntroPhase
+  /** 다시 보기를 누를 때마다 늘어나 Intro를 새로 시작시킨다 */
+  introRun: number
+  /** 인트로가 끝난 뒤 카메라가 은하로 다가오는 시간(ms) */
+  introRevealMs: number
+  isDraggingFiles: boolean
+  travelOrigin: TravelOrigin | null
+  /** 방금 만들어져 등장 애니메이션을 보여줄 프로젝트 */
+  bornProjectId: ID | null
+  toasts: Toast[]
 
-  inspectorOpen: boolean;
-  toggleInspector(): void;
-
-  drawerOpen: boolean;
-  setDrawerOpen(open: boolean): void;
-
-  searchOpen: boolean;
-  setSearchOpen(open: boolean): void;
-
-  editor: EditorState;
-  openEditor(options?: { itemId?: string; preset?: Partial<ItemDraft> }): void;
-  closeEditor(): void;
-
-  graph: GraphUiState;
-  setFocusMode(enabled: boolean): void;
-  setFocusDepth(depth: number): void;
-  toggleGraphType(type: ItemType): void;
-
-  theme: ThemePreference;
-  setTheme(theme: ThemePreference): void;
+  openDialog: (dialog: DialogDescriptor) => void
+  closeDialog: () => void
+  stageFiles: (files: File[]) => void
+  setStagedFiles: (files: File[]) => void
+  startReveal: (revealMs: number) => void
+  finishIntro: () => void
+  replayIntro: () => void
+  setDraggingFiles: (dragging: boolean) => void
+  setTravelOrigin: (origin: TravelOrigin | null) => void
+  setBornProject: (id: ID | null) => void
+  notify: (message: string, tone?: Toast['tone']) => void
+  dismissToast: (id: ID) => void
 }
 
-const clampDepth = (depth: number) => Math.min(GRAPH.focus.maxDepth, Math.max(GRAPH.focus.minDepth, depth));
+export const useUiStore = create<UiState>((set, get) => ({
+  dialog: null,
+  stagedFiles: [],
+  introPhase: 'playing',
+  introRun: 0,
+  introRevealMs: 0,
+  isDraggingFiles: false,
+  travelOrigin: null,
+  bornProjectId: null,
+  toasts: [],
 
-export const useUiStore = create<UiState>((set) => ({
-  selectedId: null,
-  select: (id) => set((state) => ({ selectedId: id, inspectorOpen: id ? true : state.inspectorOpen })),
+  openDialog: (dialog) => set({ dialog }),
+  closeDialog: () => set({ dialog: null, stagedFiles: [] }),
+  stageFiles: (files) => set((state) => ({ stagedFiles: [...state.stagedFiles, ...files] })),
+  setStagedFiles: (stagedFiles) => set({ stagedFiles }),
+  startReveal: (introRevealMs) => set({ introPhase: 'revealing', introRevealMs }),
+  finishIntro: () => set({ introPhase: 'done' }),
+  replayIntro: () =>
+    set((state) => ({ dialog: null, stagedFiles: [], introPhase: 'playing', introRun: state.introRun + 1 })),
+  setDraggingFiles: (isDraggingFiles) => set({ isDraggingFiles }),
+  setTravelOrigin: (travelOrigin) => set({ travelOrigin }),
+  setBornProject: (bornProjectId) => set({ bornProjectId }),
 
-  inspectorOpen: true,
-  toggleInspector: () => set((state) => ({ inspectorOpen: !state.inspectorOpen })),
-
-  drawerOpen: false,
-  setDrawerOpen: (drawerOpen) => set({ drawerOpen }),
-
-  searchOpen: false,
-  setSearchOpen: (searchOpen) => set({ searchOpen }),
-
-  editor: { open: false, session: 0, itemId: null, preset: null },
-  openEditor: (options = {}) =>
-    set((state) => ({
-      editor: {
-        open: true,
-        session: state.editor.session + 1,
-        itemId: options.itemId ?? null,
-        preset: options.preset ?? null,
-      },
-      searchOpen: false,
-      drawerOpen: false,
-    })),
-  closeEditor: () => set((state) => ({ editor: { ...state.editor, open: false } })),
-
-  graph: { focusMode: false, focusDepth: GRAPH.focus.defaultDepth, hiddenTypes: [] },
-  setFocusMode: (focusMode) => set((state) => ({ graph: { ...state.graph, focusMode } })),
-  setFocusDepth: (depth) => set((state) => ({ graph: { ...state.graph, focusDepth: clampDepth(depth) } })),
-  toggleGraphType: (type) =>
-    set((state) => {
-      const { hiddenTypes } = state.graph;
-      const next = hiddenTypes.includes(type) ? hiddenTypes.filter((t) => t !== type) : [...hiddenTypes, type];
-      return { graph: { ...state.graph, hiddenTypes: next } };
-    }),
-
-  theme: preferencesService.get().theme,
-  setTheme: (theme) => {
-    preferencesService.set({ theme });
-    set({ theme });
+  notify: (message, tone = 'info') => {
+    const id = createId()
+    set((state) => ({ toasts: [...state.toasts, { id, message, tone }] }))
+    window.setTimeout(() => get().dismissToast(id), LIMITS.toastMs)
   },
-}));
+  dismissToast: (id) => set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) })),
+}))

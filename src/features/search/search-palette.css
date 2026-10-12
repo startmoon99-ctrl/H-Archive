@@ -1,0 +1,117 @@
+.palette {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.palette__field {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-text-faint);
+}
+
+.palette__field svg {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.palette__input {
+  flex: 1;
+  min-width: 0;
+  height: 3.75rem;
+  border: 0;
+  background: none;
+  font-size: var(--text-lg);
+  outline: none;
+}
+
+.palette__input::placeholder {
+  color: var(--color-text-faint);
+}
+
+.palette__hint {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--text-xs);
+}
+
+:root[data-ui='touch'] .palette__hint {
+  display: none;
+}
+
+.palette__list {
+  max-height: min(56vh, 30rem);
+  padding: var(--space-2);
+}
+
+.palette__group {
+  padding: var(--space-3) var(--space-3) var(--space-1);
+}
+
+.palette__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  text-align: left;
+  transition: background-color var(--dur-instant) var(--ease-standard);
+}
+
+.palette__item[aria-selected='true'] {
+  background: var(--color-surface-hover);
+}
+
+.palette__mark {
+  display: grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  color: var(--color-text-dim);
+}
+
+/* 창작물과 항성계는 그 항성의 색을 띤 작은 별로 표시한다 */
+.palette__mark[data-kind='star']::before {
+  content: '';
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: oklch(0.8 0.14 var(--hue, 280));
+  box-shadow: 0 0 10px oklch(0.7 0.18 var(--hue, 280) / var(--m-glow));
+}
+
+.palette__mark svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.palette__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette__context {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-faint);
+}
+
+.palette__empty {
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  color: var(--color-text-dim);
+}

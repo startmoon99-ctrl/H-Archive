@@ -1,0 +1,159 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  color: var(--color-text-dim);
+}
+
+.field__note {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+}
+
+.field__note[data-tone='error'] {
+  color: var(--color-danger);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.375rem, 1fr));
+  gap: var(--space-4);
+}
+
+.input {
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-space);
+  color: var(--color-text);
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+
+.input::placeholder,
+.chip-input__field::placeholder {
+  color: var(--color-text-faint);
+}
+
+.input:hover {
+  border-color: var(--color-line-strong);
+}
+
+.input:focus-visible,
+.input:focus-within {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+textarea.input {
+  min-height: 6rem;
+  resize: vertical;
+  line-height: var(--leading-body);
+}
+
+/* 그때의 생각: 손으로 쓴 메모처럼 */
+textarea.input[data-style='memo'] {
+  font-family: var(--font-memo);
+}
+
+select.input {
+  appearance: none;
+}
+
+.chip-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chip-input__field {
+  flex: 1;
+  min-width: 5.625rem;
+  border: 0;
+  background: none;
+  outline: none;
+}
+
+.chip:has(.chip__remove) {
+  padding-right: var(--space-2);
+}
+
+.chip__remove {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  color: var(--color-text-faint);
+}
+
+.chip__remove:hover {
+  color: var(--color-text);
+}
+
+.chip__remove svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.link-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.link-list__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.hue-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hue-picker__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.hue-picker__swatch {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, oklch(0.95 0.05 var(--hue)), oklch(0.62 0.19 var(--hue)) 55%, oklch(0.25 0.1 var(--hue)));
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.hue-picker__swatch:hover {
+  transform: scale(1.12);
+}
+
+.hue-picker__swatch[aria-pressed='true'] {
+  border-color: var(--color-text);
+}
+
+.hue-picker__range {
+  width: 100%;
+  height: var(--tap-target);
+  accent-color: oklch(0.7 0.18 var(--hue));
+}

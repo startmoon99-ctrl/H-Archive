@@ -1,0 +1,74 @@
+.staging {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.staging__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.staging__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-target);
+  padding-left: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  animation: enter-rise var(--dur-base) var(--ease-enter) both;
+}
+
+.staging__item > svg {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--color-accent);
+}
+
+.staging__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staging__meta {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+}
+
+.staging__remove {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  color: var(--color-text-faint);
+}
+
+.staging__remove:hover {
+  color: var(--color-text);
+}
+
+.staging__remove svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.staging__hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+}
+
+/* 끌어다 놓기는 마우스 환경의 안내다 */
+:root[data-ui='touch'] .staging__hint {
+  display: none;
+}

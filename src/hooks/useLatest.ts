@@ -1,10 +1,8 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useRef, type RefObject } from 'react'
 
-/** 항상 최신 값을 가리키는 ref — 이벤트 리스너를 다시 등록하지 않고 최신 콜백을 쓰기 위함 */
-export function useLatest<T>(value: T) {
-  const ref = useRef(value);
-  useLayoutEffect(() => {
-    ref.current = value;
-  });
-  return ref;
+/** 이벤트 핸들러와 rAF 루프가 항상 최신 값을 읽게 한다(구독을 다시 걸지 않고). */
+export function useLatest<T>(value: T): RefObject<T> {
+  const ref = useRef(value)
+  ref.current = value
+  return ref
 }

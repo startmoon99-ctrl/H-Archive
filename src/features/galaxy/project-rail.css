@@ -1,0 +1,62 @@
+.rail {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--dock-height) + var(--safe-bottom));
+  z-index: calc(var(--z-galaxy) + 1);
+  display: flex;
+  gap: var(--space-3);
+  height: var(--rail-height);
+  padding: var(--space-2) calc((100vw - var(--rail-card-width)) / 2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  animation: rail-in var(--dur-slow) var(--ease-enter) both;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes rail-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--reveal-distance));
+  }
+}
+
+.rail__item {
+  flex: none;
+  width: var(--rail-card-width);
+  scroll-snap-align: center;
+  transition: scale var(--dur-base) var(--ease-enter);
+  scale: 0.94;
+}
+
+.rail__item:has([data-active='true']) {
+  scale: 1;
+}
+
+.rail .eyebrow {
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* Rail에서는 카드를 가로로 눕혀 높이를 줄인다 */
+.rail .project-card {
+  flex-direction: row;
+  height: 100%;
+}
+
+.rail .media-preview {
+  flex: none;
+  width: 42%;
+  aspect-ratio: auto;
+}
+
+.rail .project-card__text {
+  justify-content: center;
+  min-width: 0;
+  padding: var(--space-3);
+}

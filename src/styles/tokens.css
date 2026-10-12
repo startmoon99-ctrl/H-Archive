@@ -1,114 +1,111 @@
 /*
- * 디자인 토큰.
- * - 타입 색상(--type-*)과 모션(--motion-*, --ease-*)은 config 에서 주입된다 (styles/injectTokens.ts).
- * - 레이아웃 분기는 <html data-layout> 로 한다 (config/breakpoints.ts).
+ * 디자인 토큰. 컴포넌트 CSS는 색 · 간격 · 크기를 직접 적지 않고 여기 변수를 쓴다.
+ * 모션 값(--dur-*, --ease-*, --m-*)과 고정 UI 크기(--hud-height …)는 config에서
+ * styles/injectTokens.ts · motion/runtime.ts가 주입하므로 여기에 다시 적지 않는다.
  */
 :root {
-  color-scheme: light;
-
-  --color-bg: #f5f5f2;
-  --color-surface: #ffffff;
-  --color-surface-2: #efefeb;
-  --color-surface-3: #e5e5e0;
-  --color-border: #e1e1dc;
-  --color-border-strong: #cdcdc6;
-  --color-text: #1e2024;
-  --color-text-muted: #636770;
-  --color-text-faint: #979aa2;
-  --color-accent: #4f5fd6;
-  --color-accent-contrast: #ffffff;
-  --color-accent-soft: rgba(79, 95, 214, 0.12);
-  --color-danger: #cf4545;
-  --color-danger-soft: rgba(207, 69, 69, 0.1);
-  --color-overlay: rgba(22, 23, 28, 0.42);
-  --color-graph-link: #cfcfc8;
-
-  --shadow-1: 0 1px 2px rgba(20, 22, 30, 0.06);
-  --shadow-2: 0 6px 20px rgba(20, 22, 30, 0.1);
-  --shadow-3: 0 18px 48px rgba(20, 22, 30, 0.18);
-
-  --radius-s: 6px;
-  --radius-m: 10px;
-  --radius-l: 14px;
-  --radius-xl: 20px;
-  --radius-full: 999px;
-
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-
-  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
-
-  --text-xs: 12px;
-  --text-s: 13px;
-  --text-m: 14px;
-  --text-l: 16px;
-  --text-xl: 20px;
-  --text-2xl: 28px;
-
-  --size-sidebar: 264px;
-  --size-inspector: 340px;
-  --size-topbar: 52px;
-  --size-bottomnav: 60px;
-  --size-control: 34px;
-  --size-row: 32px;
-  --size-touch: 44px;
-  --size-card-min: 210px;
-  --size-reading: 760px;
-
-  --page-padding: var(--space-6);
-
-  --z-panel: 20;
-  --z-sheet: 30;
-  /* BottomSheet 는 하단 내비게이션 뒤에서 올라온다 */
-  --z-nav: 35;
-  --z-overlay: 40;
-  --z-modal: 60;
-  --z-toast: 80;
-}
-
-:root[data-theme='dark'] {
   color-scheme: dark;
 
-  --color-bg: #15161a;
-  --color-surface: #1c1e23;
-  --color-surface-2: #25272e;
-  --color-surface-3: #2f323a;
-  --color-border: #2c2f37;
-  --color-border-strong: #3d414b;
-  --color-text: #e7e8eb;
-  --color-text-muted: #a0a4ae;
-  --color-text-faint: #6d717b;
-  --color-accent: #8591f5;
-  --color-accent-contrast: #14151a;
-  --color-accent-soft: rgba(133, 145, 245, 0.16);
-  --color-danger: #ef7070;
-  --color-danger-soft: rgba(239, 112, 112, 0.14);
-  --color-overlay: rgba(0, 0, 0, 0.56);
-  --color-graph-link: #3a3d46;
+  /* 공간 */
+  --color-void: #03040a;
+  --color-space: #060817;
+  --color-navy: #0b1130;
+  --color-indigo: #1a1c52;
+  --color-violet: #7c5cf5;
+  --color-blue: #4f83ff;
 
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.36);
-  --shadow-3: 0 18px 48px rgba(0, 0, 0, 0.5);
-}
+  /* 글자 */
+  --color-text: #e9ebf7;
+  --color-text-dim: #a3a9cc;
+  --color-text-faint: #7b82ad;
 
-:root[data-layout='tablet'] {
-  --size-sidebar: 232px;
-}
+  /* 면과 선 */
+  --color-surface: #0a0d21;
+  --color-surface-raised: #11152f;
+  --color-surface-hover: #181d40;
+  --color-line: rgb(165 175 255 / 0.14);
+  --color-line-strong: rgb(165 175 255 / 0.3);
+  --color-backdrop: rgb(2 3 9 / 0.72);
+  --color-accent: #a99bff;
+  --color-danger: #ff8597;
+  --color-focus: #c4baff;
 
-/* 모바일은 터치 기준으로 컨트롤을 키운다 */
-:root[data-layout='mobile'] {
-  --size-control: 40px;
-  --size-row: 44px;
-  --size-card-min: 150px;
-  --text-m: 15px;
-  --text-s: 14px;
-  --page-padding: var(--space-4);
+  /* 캔버스가 읽는 배경 색 (features/galaxy/starScene.ts) */
+  --nebula-1: #2a1f7a;
+  --nebula-2: #123a8f;
+  --nebula-3: #4a2494;
+  --nebula-4: #0c1d55;
+  --star-1: #ffffff;
+  --star-2: #cfd8ff;
+  --star-3: #b9a8ff;
+  --star-4: #9fc4ff;
+
+  /*
+   * 화면 배율. 1920px보다 넓은 화면(QHD · 4K)에서는 root 글자 크기가 16px → 최대 22px로 커지고,
+   * rem으로 적은 글자 · 간격 · 크기가 함께 커진다. JS는 useViewport().scale로 같은 배율을 읽는다.
+   */
+  --root-font-size: clamp(100%, 0.45vw + 7.36px, 137.5%);
+
+  /* 타이포그래피 */
+  --font-display: 'Cormorant Garamond', 'Noto Serif KR', 'Times New Roman', serif;
+  --font-body: 'Pretendard Variable', Pretendard, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  --font-memo: 'Noto Serif KR', 'Cormorant Garamond', serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2.25rem;
+  --text-display: clamp(2.6rem, 7vw, 5.5rem);
+
+  --tracking-wide: 0.18em;
+  --tracking-display: 0.32em;
+  --leading-tight: 1.2;
+  --leading-body: 1.7;
+
+  /* 간격 · 크기는 rem이다. 넓은 화면에서 base.css의 root 글자 크기와 함께 커진다. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: 7rem;
+
+  /* 형태 */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --radius-pill: 999px;
+
+  --opacity-dim: 0.22;
+  --opacity-muted: 0.6;
+
+  --glow-soft: 0 0 24px;
+  --glow-strong: 0 0 60px;
+  --shadow-panel: 0 30px 80px rgb(0 0 0 / 0.6);
+
+  /* 크기 */
+  --tap-target: 2.75rem;
+  --content-width: 67.5rem;
+  --dialog-width: 35rem;
+  --drawer-width: 25rem;
+  --palette-width: 38.75rem;
+  --rail-card-width: min(72vw, 16.25rem);
+
+  /* 층 */
+  --z-galaxy: 0;
+  --z-project: 20;
+  --z-hud: 30;
+  --z-dropzone: 40;
+  --z-dialog: 50;
+  --z-toast: 60;
+  --z-intro: 70;
+  --z-cursor: 80;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }

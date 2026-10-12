@@ -1,0 +1,193 @@
+.timeline {
+  --gutter: 11.25rem;
+  --node: 0.6875rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  width: min(100%, var(--content-width));
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6) var(--space-9);
+}
+
+.timeline__title {
+  margin-top: var(--space-2);
+  font-family: var(--font-memo);
+  font-size: var(--text-2xl);
+  font-weight: 300;
+}
+
+.timeline__track {
+  position: relative;
+}
+
+/* 세로선. 읽어 내려간 만큼 빛이 채워진다(--scroll: 0 ~ 1). */
+.timeline__line {
+  position: absolute;
+  left: var(--gutter);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-line);
+}
+
+.timeline__line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, oklch(0.7 0.18 var(--hue)), oklch(0.85 0.1 var(--hue)));
+  box-shadow: var(--glow-soft) oklch(0.7 0.18 var(--hue) / calc(0.8 * var(--m-glow)));
+  transform: scaleY(var(--scroll, 0));
+  transform-origin: top;
+}
+
+.timeline__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-bottom: var(--space-8);
+}
+
+.entry,
+.timeline__now {
+  position: relative;
+  padding-left: calc(var(--gutter) + var(--space-7));
+}
+
+.entry__node {
+  position: absolute;
+  left: calc(var(--gutter) - var(--node) / 2 + 0.5px);
+  top: 6px;
+  width: var(--node);
+  height: var(--node);
+  border: 1px solid oklch(0.8 0.12 var(--hue));
+  border-radius: 50%;
+  background: var(--color-space);
+  box-shadow: 0 0 0 4px var(--color-space);
+}
+
+.entry__node[data-now] {
+  background: oklch(0.85 0.12 var(--hue));
+  box-shadow:
+    0 0 0 4px var(--color-space),
+    var(--glow-soft) oklch(0.7 0.18 var(--hue) / var(--m-glow));
+  animation: star-breathe calc(4s / var(--m-ambient-rate)) ease-in-out infinite;
+  animation-play-state: var(--ambient-play);
+}
+
+.entry__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.entry__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+/* PC: 날짜가 선의 왼쪽에 놓인다 */
+.entry__date {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--gutter) - var(--space-6));
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: 0.06em;
+  text-align: right;
+  color: var(--color-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.entry__title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+
+.entry__version {
+  padding: 2px var(--space-3);
+  border: 1px solid oklch(0.75 0.14 var(--hue) / 0.5);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  color: oklch(0.85 0.1 var(--hue));
+}
+
+.entry__edit {
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.entry:hover .entry__edit,
+.entry__edit:focus-visible,
+:root[data-ui='touch'] .entry__edit {
+  opacity: 1;
+}
+
+/* 그때의 생각 */
+.entry__memo {
+  position: relative;
+  padding: var(--space-2) 0 var(--space-2) var(--space-5);
+  border-left: 1px solid oklch(0.75 0.14 var(--hue) / 0.5);
+  font-family: var(--font-memo);
+  font-size: var(--text-lg);
+  font-weight: 300;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  color: var(--color-text);
+}
+
+.entry__memo::before {
+  content: '“';
+}
+
+.entry__memo::after {
+  content: '”';
+}
+
+.entry__tech,
+.entry__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+
+.timeline__now-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.timeline__now-label {
+  font-family: var(--font-memo);
+  font-size: var(--text-lg);
+  color: var(--color-text-dim);
+}
+
+/* 모바일 · 좁은 화면: 선을 왼쪽 끝에 붙이고 날짜를 제목 위로 올린다 */
+:root:is([data-layout='mobile'], [data-layout='tablet']) .timeline {
+  --gutter: 6px;
+
+  padding-inline: var(--space-5);
+}
+
+:root:is([data-layout='mobile'], [data-layout='tablet']) :is(.entry, .timeline__now) {
+  padding-left: calc(var(--gutter) + var(--space-5));
+}
+
+:root:is([data-layout='mobile'], [data-layout='tablet']) .entry__date {
+  position: static;
+  width: 100%;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-md);
+  text-align: left;
+}
+
+:root[data-layout='mobile'] .entry__memo {
+  font-size: var(--text-md);
+}

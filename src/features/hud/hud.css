@@ -1,0 +1,113 @@
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-hud);
+  pointer-events: none;
+  transition: opacity var(--dur-cinematic) var(--ease-standard);
+}
+
+.hud[data-hidden='true'] {
+  opacity: 0;
+}
+
+.hud__bar,
+.hud__actions {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.hud__bar {
+  left: var(--space-5);
+  top: var(--safe-top);
+  gap: var(--space-3);
+  height: var(--hud-height);
+}
+
+.hud__brand {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-text-dim);
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    text-shadow var(--dur-base) var(--ease-standard);
+}
+
+.hud__brand:hover {
+  color: var(--color-text);
+  text-shadow: var(--glow-soft) rgb(169 155 255 / calc(0.7 * var(--m-glow)));
+}
+
+/* PC: 오른쪽 위 */
+.hud__actions[data-placement='corner'] {
+  right: var(--space-5);
+  top: var(--safe-top);
+  gap: var(--space-2);
+  height: var(--hud-height);
+}
+
+.hud__shortcut {
+  font-family: inherit;
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+}
+
+/* 모바일: 엄지가 닿는 하단 Dock */
+.hud__actions[data-placement='dock'] {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  justify-content: space-around;
+  height: calc(var(--dock-height) + var(--safe-bottom));
+  padding: 0 var(--space-4) var(--safe-bottom);
+  border-top: 1px solid var(--color-line);
+  background: rgb(3 4 10 / 0.95);
+}
+
+.hud__dock-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+  font-size: 0.6875rem;
+  color: var(--color-text-dim);
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    scale var(--dur-fast) var(--ease-spring);
+}
+
+.hud__dock-item:active {
+  scale: 0.92;
+}
+
+.hud__dock-item svg {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.hud__dock-item[data-primary='true'] {
+  color: var(--color-text);
+}
+
+.hud__dock-item[data-primary='true'] svg {
+  box-sizing: content-box;
+  padding: var(--space-2);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgb(124 92 245 / 0.5), rgb(79 131 255 / 0.36));
+}
+
+.hud__dock-item[data-primary='true'] span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

@@ -1,16 +1,21 @@
-// 토큰과 기본 스타일이 컴포넌트 스타일보다 먼저 로드되어야 컴포넌트가 기본값을 덮어쓸 수 있다
-import './styles/tokens.css';
-import './styles/base.css';
-import './components/ui.css';
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { App } from './App';
-import { injectDesignTokens } from './styles/injectTokens';
+// 토큰을 가장 먼저 불러온다. 뒤의 모듈이 시작하면서 화면 배율(root 글자 크기)을 읽는다.
+import './styles/tokens.css'
+import './styles/base.css'
+import './motion/reveal.css'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router'
+import { App } from './app/App'
+import { initMotion } from './store/motionStore'
+import { injectTokens } from './styles/injectTokens'
 
-injectDesignTokens();
+injectTokens()
+initMotion()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </StrictMode>,
-);
+)

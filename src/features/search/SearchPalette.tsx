@@ -1,132 +1,160 @@
-import { CornerDownLeft, SearchX } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { EmptyState } from '@/components/EmptyState';
-import { Modal } from '@/components/Modal';
-import { SearchField } from '@/components/SearchField';
-import { TypeFilter } from '@/components/TypeFilter';
-import { TypeIcon } from '@/components/TypeIcon';
-import type { ItemType } from '@/config/itemTypes';
-import { useItemActions } from '@/hooks/useItemActions';
-import { useItems } from '@/store/selectors';
-import { useUiStore } from '@/store/uiStore';
-import { formatRelative } from '@/utils/date';
-import { searchItems } from '@/utils/search';
-import { getExcerpt } from '@/utils/text';
-import './search.css';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { Orbit, Plus, Search, SlidersHorizontal, type LucideIcon } from 'lucide-react'
+import { useAddAction } from '@/app/useAddAction'
+import { useArchiveNav } from '@/app/useArchiveRoute'
+import { LIMITS } from '@/config/app'
+import { useArchiveStore } from '@/store/archiveStore'
+import { useUiStore } from '@/store/uiStore'
+import { cssVars } from '@/utils/css'
+import { formatDate } from '@/utils/format'
+import { lastActivity } from '@/utils/project'
+import { searchArchive } from '@/utils/search'
+import './search-palette.css'
 
-const EXCERPT_LENGTH = 80;
-
-function SearchPaletteBody({ onClose }: { onClose(): void }) {
-  const items = useItems();
-  const { open } = useItemActions();
-  const [query, setQuery] = useState('');
-  const [types, setTypes] = useState<ReadonlySet<ItemType>>(new Set());
-  const [activeIndex, setActiveIndex] = useState(0);
-  const listRef = useRef<HTMLUListElement>(null);
-
-  // 타입을 하나도 고르지 않으면 전체를 검색한다
-  const results = useMemo(
-    () => searchItems(items, query, { types: types.size ? types : undefined }),
-    [items, query, types],
-  );
-
-  useEffect(() => {
-    listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
-  }, [activeIndex]);
-
-  const pick = (id: string) => {
-    onClose();
-    open(id);
-  };
-
-  const toggleType = (type: ItemType) => {
-    setTypes((current) => {
-      const next = new Set(current);
-      if (!next.delete(type)) next.add(type);
-      return next;
-    });
-    setActiveIndex(0);
-  };
-
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.nativeEvent.isComposing) return;
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      const step = event.key === 'ArrowDown' ? 1 : -1;
-      setActiveIndex((index) => (index + step + results.length) % Math.max(1, results.length));
-    } else if (event.key === 'Enter' && results[activeIndex]) {
-      event.preventDefault();
-      pick(results[activeIndex].id);
-    }
-  };
-
-  return (
-    <div className="search">
-      <div className="search__input">
-        <SearchField
-          size="large"
-          value={query}
-          onChange={(value) => {
-            setQuery(value);
-            setActiveIndex(0);
-          }}
-          onKeyDown={onKeyDown}
-          placeholder="제목, 내용, #태그 검색"
-          aria-label="아카이브 검색"
-          data-autofocus
-        />
-        {/* 검색어 지우기(X)와 헷갈리지 않도록 글자 버튼으로 둔다 */}
-        <button type="button" className="btn btn--ghost search__close" onClick={onClose}>
-          닫기
-        </button>
-      </div>
-
-      <div className="search__filters">
-        <TypeFilter isActive={(type) => types.has(type)} onToggle={toggleType} />
-      </div>
-
-      {results.length ? (
-        <>
-          <p className="section-label search__label">{query.trim() ? `결과 ${results.length}` : '최근 항목'}</p>
-          <ul className="search__results" ref={listRef}>
-            {results.map((item, index) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  className="search__result"
-                  data-active={index === activeIndex}
-                  onMouseMove={() => setActiveIndex(index)}
-                  onClick={() => pick(item.id)}
-                >
-                  <TypeIcon type={item.type} boxed />
-                  <span className="search__text">
-                    <span className="search__title">{item.title}</span>
-                    <span className="search__excerpt">
-                      {getExcerpt(item.content, EXCERPT_LENGTH) || item.tags.map((tag) => `#${tag}`).join(' ')}
-                    </span>
-                  </span>
-                  <span className="search__meta">{formatRelative(item.updatedAt)}</span>
-                  <CornerDownLeft className="search__enter" size={14} aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <EmptyState icon={SearchX} title="찾는 항목이 없어요" description="다른 검색어나 타입으로 다시 찾아보세요" />
-      )}
-    </div>
-  );
+interface PaletteItem {
+  key: string
+  group: string
+  title: string
+  context: string
+  hue?: number
+  icon?: LucideIcon
+  run: () => void
 }
 
-export function SearchPalette() {
-  const open = useUiStore((state) => state.searchOpen);
-  const setOpen = useUiStore((state) => state.setSearchOpen);
-  const close = () => setOpen(false);
+/**
+ * 빠른 탐색. 평소에는 보이지 않다가 Ctrl/⌘ + K 또는 검색 버튼으로 열린다.
+ * 검색어가 없으면 최근 창작물과 자주 쓰는 동작을 보여준다.
+ */
+export function SearchPalette({ onClose }: { onClose: () => void }) {
+  const nav = useArchiveNav()
+  const add = useAddAction()
+  const openDialog = useUiStore((state) => state.openDialog)
+  const categories = useArchiveStore((state) => state.categories)
+  const projects = useArchiveStore((state) => state.projects)
+  const [query, setQuery] = useState('')
+  const [cursor, setCursor] = useState(0)
+  const listRef = useRef<HTMLUListElement>(null)
+
+  const items = useMemo<PaletteItem[]>(() => {
+    const categoryOf = new Map(categories.map((category) => [category.id, category]))
+    // 검색 창을 닫은 뒤에 이동하거나 다음 창을 연다
+    const then = (action: () => void) => () => {
+      onClose()
+      action()
+    }
+    const commands: PaletteItem[] = [
+      { key: 'add', group: '동작', title: '창작물 추가', context: '파일을 올리고 기록을 시작합니다', icon: Plus, run: then(add) },
+      {
+        key: 'category',
+        group: '동작',
+        title: '항성계 추가',
+        context: '새 카테고리를 만듭니다',
+        icon: Orbit,
+        run: then(() => openDialog({ type: 'category' })),
+      },
+      {
+        key: 'settings',
+        group: '동작',
+        title: '모션 설정',
+        context: '움직임의 세기와 속도를 조절합니다',
+        icon: SlidersHorizontal,
+        run: then(() => openDialog({ type: 'settings' })),
+      },
+    ]
+
+    const needle = query.trim().toLowerCase()
+    if (!needle) {
+      const recent = [...projects]
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .slice(0, LIMITS.recentProjects)
+        .map<PaletteItem>((project) => {
+          const category = categoryOf.get(project.categoryId)
+          return {
+            key: project.id,
+            group: '최근 창작물',
+            title: project.title,
+            context: `${category?.name ?? ''} · ${formatDate(lastActivity(project))}`,
+            hue: category?.hue,
+            run: then(() => nav.toProject(project.id)),
+          }
+        })
+      return [...recent, ...commands]
+    }
+
+    const found = searchArchive(needle, categories, projects, LIMITS.searchResults).map<PaletteItem>((result) => ({
+      key: `${result.type}-${result.id}`,
+      group: result.type === 'category' ? '항성계' : '창작물',
+      title: result.title,
+      context: result.context,
+      hue: result.hue,
+      run: then(() => (result.type === 'category' ? nav.toSystem(result.id) : nav.toProject(result.id))),
+    }))
+    return [...found, ...commands.filter((command) => command.title.toLowerCase().includes(needle))]
+  }, [query, categories, projects, nav, add, openDialog, onClose])
+
+  useEffect(() => setCursor(0), [query])
+  useEffect(() => {
+    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })
+  }, [cursor])
+
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.nativeEvent.isComposing || items.length === 0) return
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const delta = event.key === 'ArrowDown' ? 1 : -1
+      setCursor((current) => (current + delta + items.length) % items.length)
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      items[cursor]?.run()
+    }
+  }
 
   return (
-    <Modal open={open} onClose={close} label="검색" variant="palette">
-      <SearchPaletteBody onClose={close} />
-    </Modal>
-  );
+    <div className="palette">
+      <label className="palette__field">
+        <Search aria-hidden="true" />
+        <input
+          className="palette__input"
+          role="combobox"
+          aria-expanded="true"
+          aria-controls="palette-results"
+          aria-label="창작물 · 항성계 · 메모 검색"
+          placeholder="창작물, 태그, 그때의 메모 검색"
+          value={query}
+          data-autofocus
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={onKeyDown}
+        />
+        <kbd className="palette__hint">Esc</kbd>
+      </label>
+
+      {items.length === 0 ? (
+        <p className="palette__empty">일치하는 기록이 없습니다.</p>
+      ) : (
+        <ul ref={listRef} id="palette-results" className="palette__list scroll-area" role="listbox">
+          {items.map((item, index) => (
+            <li key={item.key} role="presentation">
+              {item.group !== items[index - 1]?.group && <p className="palette__group eyebrow">{item.group}</p>}
+              <button
+                type="button"
+                className="palette__item"
+                role="option"
+                aria-selected={index === cursor}
+                tabIndex={-1}
+                style={cssVars({ hue: item.hue })}
+                onClick={item.run}
+                onPointerMove={() => setCursor(index)}
+              >
+                <span className="palette__mark" data-kind={item.icon ? 'command' : 'star'}>
+                  {item.icon && <item.icon aria-hidden="true" />}
+                </span>
+                <span className="palette__title">{item.title}</span>
+                <span className="palette__context">{item.context}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }

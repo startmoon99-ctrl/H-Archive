@@ -1,5 +1,2 @@
-# 소스는 어느 환경에서 받아도 LF 로 통일한다
 * text=auto eol=lf
-
-# Windows 실행 파일은 CRLF 를 유지해야 cmd 가 올바르게 해석한다
 *.bat text eol=crlf

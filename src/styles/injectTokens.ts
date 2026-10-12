@@ -1,23 +1,16 @@
-import { ITEM_TYPE_LIST } from '@/config/itemTypes';
-import { MOTION } from '@/config/motion';
+import { CHROME } from '@/config/layout'
 
-const declarations = (entries: Array<[name: string, value: string]>) =>
-  entries.map(([name, value]) => `${name}:${value};`).join('');
+const ROOT_FONT_PX = 16
 
-/** config 에 정의된 값을 CSS 변수로 내보낸다 — 타입 색상과 모션 값을 CSS에 다시 적지 않기 위함 */
-export function injectDesignTokens() {
-  const motion = declarations([
-    ['--motion-fast', `${MOTION.duration.fast}ms`],
-    ['--motion-base', `${MOTION.duration.base}ms`],
-    ['--motion-slow', `${MOTION.duration.slow}ms`],
-    ['--ease-standard', MOTION.easing.standard],
-    ['--ease-exit', MOTION.easing.exit],
-  ]);
-  const light = declarations(ITEM_TYPE_LIST.map((type) => [`--type-${type.id}`, type.color.light]));
-  const dark = declarations(ITEM_TYPE_LIST.map((type) => [`--type-${type.id}`, type.color.dark]));
+/** JS 계산과 CSS가 함께 쓰는 고정 UI 크기를 CSS 변수로 내보낸다. 화면 배율을 따르도록 rem으로 쓴다. */
+export function injectTokens(): void {
+  const style = document.documentElement.style
+  style.setProperty('--hud-height', `${CHROME.hudHeight / ROOT_FONT_PX}rem`)
+  style.setProperty('--dock-height', `${CHROME.dockHeight / ROOT_FONT_PX}rem`)
+  style.setProperty('--rail-height', `${CHROME.railHeight / ROOT_FONT_PX}rem`)
+}
 
-  const style = document.createElement('style');
-  style.dataset.source = 'design-tokens';
-  style.textContent = `:root{${motion}${light}}:root[data-theme='dark']{${dark}}`;
-  document.head.appendChild(style);
+/** 지금의 화면 배율(1 = 기준 크기). root 글자 크기에서 읽는다. */
+export function readUiScale(): number {
+  return parseFloat(getComputedStyle(document.documentElement).fontSize) / ROOT_FONT_PX || 1
 }

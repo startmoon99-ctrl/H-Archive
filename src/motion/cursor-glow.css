@@ -1,0 +1,16 @@
+.cursor-glow {
+  --size: 35rem;
+
+  position: fixed;
+  left: calc(var(--size) / -2);
+  top: calc(var(--size) / -2);
+  z-index: var(--z-cursor);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(124 110 255 / 0.13) 0%, rgb(79 131 255 / 0.05) 38%, transparent 68%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-slow) var(--ease-standard);
+}

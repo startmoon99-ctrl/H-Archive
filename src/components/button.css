@@ -1,0 +1,89 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--color-text);
+  transform: translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  transition:
+    transform var(--dur-base) var(--ease-spring),
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-standard);
+}
+
+.button:active {
+  transform: translate(var(--magnet-x, 0px), var(--magnet-y, 0px)) scale(0.96);
+}
+
+.button:disabled {
+  opacity: var(--opacity-muted);
+  cursor: default;
+}
+
+.button__icon {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.button[data-size='sm'] {
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.button[data-icon-only='true'] {
+  width: var(--tap-target);
+  padding: 0;
+}
+
+.button[data-icon-only='true'][data-size='sm'] {
+  width: 2.25rem;
+}
+
+.button[data-variant='primary'] {
+  border-color: var(--color-line-strong);
+  background: linear-gradient(135deg, rgb(124 92 245 / 0.5), rgb(79 131 255 / 0.36));
+  box-shadow: var(--glow-soft) rgb(124 92 245 / calc(0.3 * var(--m-glow)));
+}
+
+.button[data-variant='primary']:hover:not(:disabled) {
+  box-shadow: var(--glow-strong) rgb(124 92 245 / calc(0.4 * var(--m-glow)));
+}
+
+.button[data-variant='ghost'] {
+  border-color: var(--color-line);
+  background: rgb(10 13 33 / 0.6);
+}
+
+.button[data-variant='ghost']:hover:not(:disabled),
+.button[data-variant='quiet']:hover:not(:disabled) {
+  border-color: var(--color-line-strong);
+  background: var(--color-surface-hover);
+}
+
+.button[data-variant='quiet'] {
+  color: var(--color-text-dim);
+}
+
+.button[data-variant='quiet']:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.button[data-variant='danger'] {
+  border-color: rgb(255 133 151 / 0.4);
+  color: var(--color-danger);
+}
+
+.button[data-variant='danger']:hover:not(:disabled) {
+  background: rgb(255 133 151 / 0.12);
+}
