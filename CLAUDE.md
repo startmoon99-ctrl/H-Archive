@@ -119,7 +119,8 @@ config/motion.ts ─ motionStore(설정 · 저장 · 시스템 '동작 줄이기
 ## 배포
 
 - `vercel.json`: 빌드(`npm run build`) · 출력(`dist`) · SPA rewrite. `/system/…` · `/project/…`를 직접 열어도 `index.html`이 응답한다.
-- 이 폴더는 아직 git 저장소가 아니다. 배포할 저장소와 Vercel 프로젝트는 소유자에게 확인한다.
+- GitHub `main`에 push하면 Vercel이 자동으로 빌드 · 배포한다. 배포본의 기록은 그 주소의 브라우저에만 저장되며 로컬 개발 주소와 공유되지 않는다.
+- push 전에 파일 이름의 대소문자를 확인한다. Windows는 구분하지 않지만 Vercel(Linux)은 구분하므로 import 경로와 다르면 빌드가 깨진다.
 
 ## 검증할 때
 
