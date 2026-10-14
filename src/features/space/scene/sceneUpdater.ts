@@ -6,6 +6,7 @@ import type { ID } from '@/types/archive'
 import { clamp } from '@/utils/math'
 import { project, type Projected } from '../camera/cameraView'
 import { LINE_STRIDE } from '../environment/glRenderer'
+import type { Arrangement, Vec3 } from './arrangement'
 import type { ClusterLayout, PlacedNode, SpaceLayout } from './layout'
 
 const { interaction, float, threads, camera, breath } = spaceConfig
@@ -51,6 +52,8 @@ export interface SceneFrame {
   touchUi: boolean
   /** 전체 보기인가. 성단은 전체 보기에서만 커서에 반응한다 */
   overview: boolean
+  /** 옮겨 가는 중인 성단의 지금 자리. 그 성단의 작품과 선도 함께 옮겨 그린다 */
+  arrangement?: Pick<Arrangement, 'positionOf'>
 }
 
 export interface SceneUpdater {
@@ -200,11 +203,11 @@ export function createSceneUpdater(elements: SceneElements): SceneUpdater {
 
   const pointerDistance = () => Math.hypot(projected.x - pointer.x, projected.y - pointer.y)
 
-  const updateCluster = (cluster: ClusterLayout, frame: SceneFrame, dt: number, now: number) => {
+  const updateCluster = (cluster: ClusterLayout, at: Vec3, frame: SceneFrame, dt: number, now: number) => {
     const element = elements.clusters.get(cluster.category.id)
     if (!element) return
     const state = stateOf(element)
-    if (!place(element, state, cluster.x, cluster.y, cluster.z)) return
+    if (!place(element, state, at.x, at.y, at.z)) return
 
     const motion = getMotion()
     let near = 0
@@ -240,7 +243,14 @@ export function createSceneUpdater(elements: SceneElements): SceneUpdater {
     }
   }
 
-  const updateNode = (node: PlacedNode, frame: SceneFrame, focused: boolean, dt: number, now: number): number => {
+  const updateNode = (
+    node: PlacedNode,
+    shift: Vec3,
+    frame: SceneFrame,
+    focused: boolean,
+    dt: number,
+    now: number,
+  ): number => {
     const element = elements.nodes.get(node.project.id)
     if (!element) return 0
     frames.set(node.project.id, node)
@@ -248,9 +258,9 @@ export function createSceneUpdater(elements: SceneElements): SceneUpdater {
     // 제자리에서 천천히 떠 있는 움직임
     const sway = float.amplitude * getMotion().background
     const phase = now * float.speed * (0.6 + node.seed * 0.8) + node.seed * 40
-    const x = node.x + Math.sin(phase) * sway
-    const y = node.y + Math.cos(phase * 0.8) * sway
-    if (!place(element, state, x, y, node.z)) return 0
+    const x = node.x + shift.x + Math.sin(phase) * sway
+    const y = node.y + shift.y + Math.cos(phase * 0.8) * sway
+    if (!place(element, state, x, y, node.z + shift.z)) return 0
 
     // 카메라가 통과할 만큼 가까워지면 사라진다
     const fade = clamp((projected.depth - camera.near * 1.5) / (camera.near * 5), 0, 1)
@@ -299,13 +309,19 @@ export function createSceneUpdater(elements: SceneElements): SceneUpdater {
       if (needed > lines.length) lines = new Float32Array(needed * 2)
 
       for (const cluster of frame.layout.clusters) {
-        updateCluster(cluster, frame, dt, now)
+        // 옮겨 가는 중이면 그 자리에, 아니면 배치의 자리에 놓는다. 작품과 선은 같은 만큼 함께 옮긴다
+        const at = frame.arrangement?.positionOf(cluster.category.id) ?? cluster
+        const shift = { x: at.x - cluster.x, y: at.y - cluster.y, z: at.z - cluster.z }
+        updateCluster(cluster, at, frame, dt, now)
         const focused = cluster === focusedCluster
         for (const node of cluster.nodes) {
-          const near = updateNode(node, frame, focused, dt, now)
+          const near = updateNode(node, shift, frame, focused, dt, now)
           if (cluster !== threadCluster) continue
           const alpha = (threads.alpha + (threads.activeAlpha - threads.alpha) * near) * threadAmount
-          lines.set([cluster.x, cluster.y, cluster.z, 0, node.x, node.y, node.z, alpha], vertices * LINE_STRIDE)
+          lines.set(
+            [at.x, at.y, at.z, 0, node.x + shift.x, node.y + shift.y, node.z + shift.z, alpha],
+            vertices * LINE_STRIDE,
+          )
           vertices += 2
         }
       }

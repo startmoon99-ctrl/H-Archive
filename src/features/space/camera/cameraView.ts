@@ -122,3 +122,15 @@ export function screenToFocusPlane(screen: Point): { x: number; y: number; z: nu
     z: cameraView.z + r[2] * sx + d[2] * sy,
   }
 }
+
+/** 화면의 한 점이 카메라에서 depth만큼 떨어진 면(화면과 나란한 면)에서 가리키는 world 좌표. project()의 반대다 */
+export function screenToDepthPlane(screen: Point, depth: number): { x: number; y: number; z: number } {
+  const { position: c, right: r, down: d, back: b } = cameraView
+  const sx = ((screen.x - cameraView.width / 2) * depth) / cameraView.focal
+  const sy = ((screen.y - cameraView.height / 2) * depth) / cameraView.focal
+  return {
+    x: c[0] + r[0] * sx + d[0] * sy - b[0] * depth,
+    y: c[1] + r[1] * sx + d[1] * sy - b[1] * depth,
+    z: c[2] + r[2] * sx + d[2] * sy - b[2] * depth,
+  }
+}

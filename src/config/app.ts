@@ -6,6 +6,9 @@ export const APP = {
 /** localStorage에는 소량의 설정만 둔다. Archive 데이터는 저장소 계층(services/storage)이 맡는다. */
 export const STORAGE_KEYS = {
   motion: 'h-archive:motion',
+  sound: 'h-archive:sound',
+  /** 직접 옮긴 성단의 자리(이 브라우저에만 저장) */
+  placements: 'h-archive:placements',
 } as const
 
 export const ARCHIVE_DB = {

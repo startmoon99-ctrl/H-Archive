@@ -9,6 +9,7 @@ const NEXT_STAGE: Record<Stage, Stage | null> = { in: 'hold', hold: 'out', out: 
 
 function IntroLine({ step, stage }: { step: IntroStep; stage: Stage }) {
   const letters = [...step.text]
+  const accented = step.accent && step.text.startsWith(step.accent) ? [...step.accent].length : 0
   const letterDelay = (step.in * INTRO_LETTER_SPREAD) / letters.length
   return (
     <div
@@ -18,7 +19,13 @@ function IntroLine({ step, stage }: { step: IntroStep; stage: Stage }) {
     >
       <p className="intro__line" aria-label={step.text}>
         {letters.map((letter, index) => (
-          <span key={index} className="intro__letter" aria-hidden="true" style={cssVars({ i: index })}>
+          <span
+            key={index}
+            className="intro__letter"
+            data-accent={index < accented || undefined}
+            aria-hidden="true"
+            style={cssVars({ i: index })}
+          >
             {letter.trim()}
           </span>
         ))}
@@ -37,10 +44,14 @@ function IntroRun() {
   const [stepIndex, setStepIndex] = useState(0)
   const [stage, setStage] = useState<Stage>('in')
   const step = sequence.steps[stepIndex]
+  // 글자가 모두 지나가면 입장 문구가 누르기를 기다린다
+  const gated = started && !step
 
-  const skip = useCallback(() => {
-    if (useUiStore.getState().introPhase === 'playing') startReveal(sequence.skipRevealMs)
-  }, [startReveal])
+  // 기다리는 까만 화면에서 누르면 공간이 천천히 페이드인되고, 그 전에 누르면(Skip) 바로 들어간다
+  const advance = useCallback(() => {
+    if (useUiStore.getState().introPhase !== 'playing') return
+    startReveal(gated ? sequence.revealMs : sequence.skipRevealMs)
+  }, [gated, startReveal])
 
   // 글자 순서를 진행한다
   useEffect(() => {
@@ -49,10 +60,7 @@ function IntroRun() {
       const lead = window.setTimeout(() => setStarted(true), sequence.leadMs)
       return () => window.clearTimeout(lead)
     }
-    if (!step) {
-      startReveal(sequence.revealMs)
-      return
-    }
+    if (!step) return
     const timer = window.setTimeout(() => {
       const next = NEXT_STAGE[stage]
       if (next) {
@@ -63,7 +71,7 @@ function IntroRun() {
       }
     }, step[stage])
     return () => window.clearTimeout(timer)
-  }, [phase, started, step, stage, startReveal])
+  }, [phase, started, step, stage])
 
   // 카메라가 공간에 다다르면 인트로를 끝낸다
   const revealMs = useUiStore((state) => state.introRevealMs)
@@ -75,16 +83,31 @@ function IntroRun() {
 
   useEffect(() => {
     if (phase !== 'playing') return
-    window.addEventListener('keydown', skip)
-    return () => window.removeEventListener('keydown', skip)
-  }, [phase, skip])
+    window.addEventListener('keydown', advance)
+    return () => window.removeEventListener('keydown', advance)
+  }, [phase, advance])
 
   return (
-    <div className="intro" data-phase={phase} style={cssVars({ reveal: `${revealMs}ms` })} onClick={skip}>
+    <div
+      className="intro"
+      data-phase={phase}
+      data-gated={gated}
+      style={cssVars({
+        reveal: `${revealMs}ms`,
+        'gate-in': `${sequence.gate.fadeInMs}ms`,
+        'gate-out': `${sequence.gate.fadeOutMs}ms`,
+      })}
+      onClick={advance}
+    >
       <div className="intro__light" aria-hidden="true" />
       {started && step && phase === 'playing' && <IntroLine key={step.id} step={step} stage={stage} />}
-      {phase === 'playing' && (
-        <button type="button" className="intro__skip eyebrow" onClick={skip}>
+      {gated && (
+        <button type="button" className="intro__gate" onClick={advance}>
+          <span className="intro__gate-label">{sequence.gate.label}</span>
+        </button>
+      )}
+      {phase === 'playing' && !gated && (
+        <button type="button" className="intro__skip eyebrow" onClick={advance}>
           Skip
         </button>
       )}
@@ -93,7 +116,7 @@ function IntroRun() {
 }
 
 /**
- * 시네마틱 인트로: 검은 화면 → H ARCHIVE → MY CREATIVE HISTORY → 공간으로 진입.
+ * 시네마틱 인트로: 검은 화면 → H ARCHIVE → MY CREATIVE HISTORY → Open Archive(누르기) → 공간이 천천히 페이드인.
  * 접속할 때와 다시 보기가 같은 인트로(config/intro.ts의 introSequence)를 처음부터 재생한다.
  */
 export function Intro() {

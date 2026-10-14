@@ -44,6 +44,12 @@
     box-shadow var(--dur-base) var(--ease-standard);
 }
 
+/* 홀수 개면 마지막 프리셋이 한 줄을 차지한다 */
+.settings__preset:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
 .settings__preset:hover:not(:disabled) {
   border-color: var(--color-line-strong);
 }
@@ -77,15 +83,142 @@
   width: 100%;
 }
 
-.settings__advanced summary {
+.settings__advanced-toggle {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  width: 100%;
   min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: rgb(var(--light-rgb) / 0.03);
   font-size: var(--text-sm);
   letter-spacing: 0.04em;
   color: var(--color-text-dim);
+  text-align: left;
   cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+
+.settings__advanced-toggle:hover,
+.settings__advanced-toggle:focus-visible,
+.settings__advanced[data-open='true'] .settings__advanced-toggle {
+  border-color: var(--color-line-strong);
+  background: rgb(var(--light-rgb) / 0.07);
+  color: var(--color-text);
+}
+
+.settings__advanced-toggle:active {
+  background: rgb(var(--light-rgb) / 0.1);
+}
+
+.settings__advanced-chevron {
+  flex: none;
+  margin-left: auto;
+  transition: rotate var(--dur-base) var(--ease-spring);
+}
+
+.settings__advanced[data-open='true'] .settings__advanced-chevron {
+  rotate: 180deg;
+}
+
+/* 펼침: 높이는 grid 행으로 부드럽게 열고, 항목은 위에서부터 차례로 떠오른다 */
+.settings__advanced-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease-cinematic);
+}
+
+.settings__advanced[data-open='true'] .settings__advanced-body {
+  grid-template-rows: 1fr;
+}
+
+.settings__advanced-body > .settings__controls {
+  min-height: 0;
+  padding-top: 0;
+  overflow: hidden;
+}
+
+/* 여백은 접히는 안쪽에 둔다(닫혔을 때 높이가 남지 않게) */
+.settings__advanced-body > .settings__controls > :first-child {
+  margin-top: var(--space-3);
+}
+
+.settings__advanced-body > .settings__controls > * {
+  opacity: 0;
+  translate: 0 calc(var(--reveal-distance) * -0.5);
+  filter: blur(calc(var(--reveal-blur) * 0.4));
+  transition:
+    opacity var(--dur-fast) var(--ease-exit),
+    translate var(--dur-fast) var(--ease-exit),
+    filter var(--dur-fast) var(--ease-exit);
+}
+
+.settings__advanced[data-open='true'] .settings__advanced-body > .settings__controls > * {
+  opacity: 1;
+  translate: 0 0;
+  filter: none;
+  transition:
+    opacity var(--dur-slow) var(--ease-enter),
+    translate var(--dur-slow) var(--ease-enter),
+    filter var(--dur-slow) var(--ease-enter);
+  transition-delay: calc(var(--i, 0) * var(--stagger) * 0.4);
+}
+
+/* 고르는 항목(Motion Feel) */
+.settings__segments {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.settings__segment {
+  min-height: var(--tap-target);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+
+.settings__segment:hover:not(:disabled) {
+  border-color: var(--color-line-strong);
+  color: var(--color-text);
+}
+
+.settings__segment[aria-checked='true'] {
+  border-color: var(--color-accent);
+  background: rgb(var(--glow-rgb) / 0.14);
+  color: var(--color-text);
+}
+
+.settings__segment:disabled {
+  opacity: var(--opacity-muted);
+  cursor: default;
+}
+
+/* 한 섹션 안의 묶음(Sound → BGM). 나중에 다른 소리가 생기면 묶음이 늘어난다 */
+.settings__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.settings__subhead {
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-faint);
 }
 
 .settings__custom {
@@ -116,6 +249,11 @@
   display: block;
   font-size: var(--text-xs);
   color: var(--color-text-faint);
+}
+
+.settings__control select {
+  grid-column: 1 / -1;
+  margin-top: var(--space-2);
 }
 
 .settings__control output {

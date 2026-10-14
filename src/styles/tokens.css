@@ -39,6 +39,9 @@
   --color-backdrop: rgb(1 2 4 / 0.78);
   --color-accent: #c6d0f2;
   --color-violet: #aab6e0;
+  /* 인트로의 H. rgb(var(--mark-rgb) / 투명도)로 빛을 낼 때 쓴다 */
+  --color-mark: #5b8cff;
+  --mark-rgb: 91 140 255;
   --color-danger: #f08a98;
   --color-focus: #dfe5ff;
 

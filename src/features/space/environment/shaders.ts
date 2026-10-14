@@ -25,6 +25,9 @@ vec4 toClip(vec2 screen) {
 }
 `
 
+/** 한 번에 함께 옮겨 그릴 수 있는 성단 수(성단 위치 조절). glRenderer와 environment가 같은 값을 쓴다 */
+export const MAX_MOVES = 8
+
 export const POINT_VERTEX = /* glsl */ `#version 300 es
 precision highp float;
 layout(location = 0) in vec3 aPosition;
@@ -51,15 +54,35 @@ uniform float uBlurPx;
 uniform float uMaxPoint;
 uniform float uGlow;
 uniform float uTwinkle;
+// 옮겨 가는 성단: 입자를 만들 때의 중심(w가 1이면 사용) · 지금 자리까지의 거리 · 속도(world/s)
+uniform vec4 uMoveFrom[${MAX_MOVES}];
+uniform vec3 uMoveBy[${MAX_MOVES}];
+uniform vec3 uMoveVelocity[${MAX_MOVES}];
+uniform vec3 uTrail;        // xy: 입자가 늦게 따라오는 시간 범위(초), z: 꼬리 길이 상한(world)
 out vec4 vColor;
 out float vSoft;
 
 void main() {
+  // 옮겨 가는 성단의 입자는 무리째 함께 옮긴다. 입자마다 조금씩 늦게 따라와, 빠르게 끌면 꼬리처럼 늘어진다
+  vec3 home = aHome.xyz;
+  vec3 position = aPosition;
+  if (aHome.w > 0.0) {
+    for (int i = 0; i < ${MAX_MOVES}; i++) {
+      if (uMoveFrom[i].w < 0.5 || distance(aHome.xyz, uMoveFrom[i].xyz) > 0.5) continue;
+      vec3 trail = uMoveVelocity[i] * mix(uTrail.x, uTrail.y, aSeed);
+      float trailLength = length(trail);
+      if (trailLength > uTrail.z) trail *= uTrail.z / trailLength;
+      home += uMoveBy[i];
+      position += uMoveBy[i] - trail;
+      break;
+    }
+  }
+
   // 성단에 속한 입자는 성단 단위로 반응한다: 중심이 화면의 어디에 있고 커서가 그 가장자리에서 얼마나 먼가.
   // 거리를 재는 기준(반지름의 절반)은 scene/sceneUpdater.ts와 같다.
   float homeDepth;
   float homeScale;
-  vec2 homeScreen = toScreen(aHome.xyz, homeDepth, homeScale);
+  vec2 homeScreen = toScreen(home, homeDepth, homeScale);
   float member = step(0.0001, aHome.w) * step(uNear, homeDepth);
   vec2 toPointer = uPointer.xy - homeScreen;
   float gap = length(toPointer) - aHome.w * homeScale * 0.5;
@@ -69,7 +92,7 @@ void main() {
   // 숨: 무리 전체가 아주 느리게 부풀고 가라앉는다. 식은 scene/sceneUpdater.ts의 breathOf와 같다.
   float breath = member * sin(uTime * 6.2831853 / mix(uBreath.x, uBreath.y, aPulse) + aPulse * 31.4159265);
   // 커서가 가까이 오면 중심으로 조금 모인다
-  vec3 p = aHome.xyz + (aPosition - aHome.xyz) * (1.0 + uBreath.z * breath - uAwareEffect.y * close);
+  vec3 p = home + (position - home) * (1.0 + uBreath.z * breath - uAwareEffect.y * close);
   float t = uTime * (0.25 + aSeed * 0.5);
   p.xy += vec2(sin(t + aSeed * 43.0), cos(t * 0.83 + aSeed * 19.0))
     * uDrift * aBlur * (1.0 + uAwareEffect.z * sense);
@@ -99,7 +122,10 @@ void main() {
   screen += inward / max(distanceToWrap, 0.001) * min(distanceToWrap, uWrapShape.y) * wrap;
 
   // 초점면에서 멀수록 번지고, 번진 만큼 옅어진다
-  float confusion = clamp(abs(depth - uFocusDist) / uFocusDist, 0.0, 1.0) * aBlur;
+  // 성단은 보는 대상이라 어느 각도에서도 또렷해야 한다: 성단의 입자는 공간의 초점면이 아니라
+  // 자기 성단의 중심을 초점으로 삼는다(무리 안의 앞뒤만 아주 조금 번진다). 먼지 · 배경은 그대로 초점면을 따른다.
+  float focusDepth = mix(uFocusDist, homeDepth, member);
+  float confusion = clamp(abs(depth - focusDepth) / uFocusDist, 0.0, 1.0) * aBlur;
   float core = aSize * scale;
   float size = core + confusion * uBlurPx;
   float pixels = size * uDpr;

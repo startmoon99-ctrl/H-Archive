@@ -52,7 +52,14 @@ export function buildParticleField(layout: SpaceLayout, density: number, scale: 
   const random = seededRandom(FIELD_SEED)
   const starColor = readColorToken('--particle-star')
   const dustColor = readColorToken('--particle-dust')
-  const { bounds } = layout
+  // 범위를 격자로 끊어 잡아, 성단을 조금 옮겨도 배경 점과 먼지가 그대로 있게 한다
+  const grid = config.fieldGrid
+  const bounds = {
+    minX: Math.floor(layout.bounds.minX / grid) * grid,
+    maxX: Math.ceil(layout.bounds.maxX / grid) * grid,
+    minY: Math.floor(layout.bounds.minY / grid) * grid,
+    maxY: Math.ceil(layout.bounds.maxY / grid) * grid,
+  }
   const centerX = (bounds.minX + bounds.maxX) / 2
   const centerY = (bounds.minY + bounds.maxY) / 2
   const particles: Particle[] = []

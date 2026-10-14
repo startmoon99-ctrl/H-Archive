@@ -77,3 +77,63 @@
   opacity: var(--near);
   translate: 0 calc((1 - var(--near)) * -0.4rem);
 }
+
+/*
+ * 성단 위치 조절(.space[data-arranging]): 모든 이름이 떠오르고, 고리가 잡을 수 있는 손잡이처럼 또렷해진다.
+ * 잡은 성단(data-held)은 들어 올려진 듯 빛이 커지고 고리가 넓게 퍼져 천천히 맥동한다.
+ * 놓으면 같은 곡선으로 가라앉는다. 무리의 입자가 늦게 따라오는 꼬리는 environment/shaders.ts가 그린다.
+ */
+.space[data-arranging='true'] .cluster__label {
+  opacity: calc(0.75 + var(--near) * 0.25);
+}
+
+.space[data-arranging='true'] .cluster .cluster__ring {
+  border-color: rgb(var(--light-rgb) / calc(0.18 + var(--near) * 0.3));
+}
+
+.space[data-arranging='true'] .cluster__halo,
+.space[data-arranging='true'] .cluster .cluster__core,
+.space[data-arranging='true'] .cluster .cluster__ring {
+  transition:
+    scale var(--dur-base) var(--ease-spring),
+    width var(--dur-base) var(--ease-spring),
+    border-color var(--dur-base) var(--ease-standard),
+    opacity var(--dur-base) var(--ease-standard);
+}
+
+.space[data-arranging='true'] .cluster__label {
+  transition:
+    opacity var(--dur-base) var(--ease-standard),
+    translate var(--dur-base) var(--ease-spring);
+}
+
+.cluster[data-held='true'] .cluster__halo {
+  scale: 1.35;
+}
+
+.cluster[data-held='true'] .cluster__core {
+  scale: 1.9;
+}
+
+.cluster[data-held='true'] .cluster__ring {
+  width: 3.4rem;
+  border-color: rgb(var(--light-rgb) / 0.55);
+  animation: cluster-held var(--dur-cinematic) ease-in-out infinite;
+}
+
+.cluster[data-held='true'] .cluster__label {
+  opacity: 1;
+  translate: -50% 0.9rem;
+}
+
+@keyframes cluster-held {
+  50% {
+    scale: 1.12;
+    border-color: rgb(var(--light-rgb) / 0.25);
+  }
+}
+
+/* 잡은 성단은 다른 성단 위로 */
+.cluster[data-held='true'] {
+  z-index: 100000 !important;
+}

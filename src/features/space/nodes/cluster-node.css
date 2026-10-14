@@ -88,3 +88,13 @@
   margin-right: calc(var(--tracking-wide) * -1);
   text-transform: uppercase;
 }
+
+/* 성단 위치 조절: 성단 위에서는 옮길 수 있다는 커서, 잡고 있는 동안은 쥔 손 */
+.space[data-arranging='true'] .cluster__hit {
+  cursor: move;
+}
+
+.space[data-holding='true'],
+.space[data-holding='true'] .cluster__hit {
+  cursor: grabbing;
+}

@@ -33,6 +33,10 @@ interface UiState {
   awayProjectId: ID | null
   /** 방금 만들어져 등장 애니메이션을 보여줄 프로젝트 */
   bornProjectId: ID | null
+  /** 성단 위치 조절 중인가(설정 → Space) */
+  arranging: boolean
+  /** 늘어날 때마다 카메라가 지금 화면의 처음 구도로 돌아간다(메인 화면의 Esc) */
+  viewResetRun: number
   toasts: Toast[]
 
   openDialog: (dialog: DialogDescriptor) => void
@@ -46,6 +50,8 @@ interface UiState {
   setTravelOrigin: (origin: TravelOrigin | null) => void
   setAwayProject: (id: ID | null) => void
   setBornProject: (id: ID | null) => void
+  setArranging: (arranging: boolean) => void
+  resetView: () => void
   notify: (message: string, tone?: Toast['tone'], action?: Toast['action']) => void
   dismissToast: (id: ID) => void
 }
@@ -61,6 +67,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   travelOrigin: null,
   awayProjectId: null,
   bornProjectId: null,
+  arranging: false,
+  viewResetRun: 0,
   toasts: [],
 
   openDialog: (dialog) => set((state) => ({ dialog, dialogId: state.dialogId + 1 })),
@@ -80,6 +88,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   setTravelOrigin: (travelOrigin) => set({ travelOrigin }),
   setAwayProject: (awayProjectId) => set({ awayProjectId }),
   setBornProject: (bornProjectId) => set({ bornProjectId }),
+  setArranging: (arranging) => set({ arranging }),
+  resetView: () => set((state) => ({ viewResetRun: state.viewResetRun + 1 })),
 
   notify: (message, tone = 'info', action) => {
     const id = createId()

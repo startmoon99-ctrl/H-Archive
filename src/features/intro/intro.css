@@ -89,6 +89,11 @@
   }
 }
 
+.intro__letter[data-accent] {
+  color: var(--color-mark);
+  text-shadow: 0 0 1.4rem rgb(var(--mark-rgb) / 0.45);
+}
+
 .intro__letter {
   display: block;
   min-width: 0.3em;
@@ -149,4 +154,92 @@
   --tracking-display: 0.22em;
 
   font-size: clamp(1.5rem, 7.4vw, 2.4rem);
+}
+
+/*
+ * 입장: 글자가 모두 지나가면 까만 화면에 Open Archive가 천천히 나타나 기다린다.
+ * 어디든 누르면(또는 키) 문구가 사라지고 공간이 천천히 페이드인된다.
+ * 브라우저는 사용자의 입력 전에는 소리를 막으므로 이 입력으로 음악도 함께 시작된다.
+ */
+/* 버튼은 문구 크기만큼만(커서를 올린 반응이 문구에서만 일어나게). 누르기는 화면 어디서나 된다(.intro의 onClick) */
+.intro__gate {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  cursor: pointer;
+  /* 나타남은 버튼에, 사라짐은 문구에 걸어 두 움직임이 겹치지 않게 한다 */
+  animation: intro-gate-in var(--gate-in) ease-in-out both;
+}
+
+.intro__gate-label {
+  position: relative;
+  padding: var(--space-4) var(--space-6);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 300;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgb(var(--light-rgb) / 0.72);
+  transition:
+    opacity var(--gate-out) ease-in-out,
+    color var(--dur-slow) var(--ease-enter),
+    letter-spacing var(--dur-slow) var(--ease-enter),
+    text-shadow var(--dur-slow) var(--ease-enter);
+}
+
+/* 문구 아래의 가는 빛의 선: 커서를 올리면 가운데서 양옆으로 그어진다 */
+.intro__gate-label::after {
+  content: '';
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  bottom: var(--space-2);
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgb(var(--light-rgb) / 0.8), transparent);
+  opacity: 0;
+  transform: scaleX(0);
+  transition:
+    transform var(--dur-slow) var(--ease-enter),
+    opacity var(--dur-slow) var(--ease-enter);
+}
+
+/* 커서를 올리면(키보드 포커스도) 문구가 밝아지며 자간이 조금 벌어지고 옅은 빛이 번진다 */
+:root[data-ui='pointer'] .intro__gate:hover .intro__gate-label,
+.intro__gate:focus-visible .intro__gate-label {
+  color: var(--color-light);
+  letter-spacing: 0.5em;
+  text-shadow: 0 0 1.4rem rgb(var(--glow-rgb) / 0.55);
+}
+
+:root[data-ui='pointer'] .intro__gate:hover .intro__gate-label::after,
+.intro__gate:focus-visible .intro__gate-label::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* 터치 화면은 커서가 없으므로 처음부터 또렷하게 */
+:root[data-ui='touch'] .intro__gate-label {
+  color: var(--color-text);
+}
+
+@keyframes intro-gate-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.intro[data-phase='revealing'] .intro__gate-label {
+  opacity: 0;
+}
+
+:root[data-layout='mobile'] .intro__gate-label {
+  font-size: var(--text-md);
+  letter-spacing: 0.32em;
+}
+
+/* 입장으로 들어갈 때는 막이 더 천천히 걷힌다(Skip은 위의 빠른 전환) */
+.intro[data-gated='true'] {
+  transition: opacity var(--reveal) ease-in-out;
 }

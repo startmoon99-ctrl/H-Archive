@@ -76,6 +76,12 @@
   --enter-base: calc(var(--handoff-delay) + var(--dur-slow) * 0.5);
 }
 
+/* 메인 화면 등 다른 곳으로 나갈 때: 접힐 자리(작품)가 화면에 없으므로 그 자리에서 흐려지며 공간이 드러난다 */
+.project[data-exit='fade'] {
+  clip-path: none;
+  transition: opacity var(--dur-slow) var(--ease-standard);
+}
+
 /* 움직임 최소화: 프레임에서 여는 대신 투명도만 바꾼다 */
 :root[data-motion='minimal'] .project {
   clip-path: none;

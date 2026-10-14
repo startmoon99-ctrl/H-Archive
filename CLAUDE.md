@@ -25,7 +25,7 @@ H Archive는 **내가 만들어온 창작물과 그 과정의 기억이 떠 있�
 
 - **직설적인 우주 그림을 쓰지 않는다.** 행성 · 궤도 · 알록달록한 성운 · 별자리는 소유자가 "못생겼다"고 명확히 거부했다(2026-10-12). 추상적인 빛 · 점 · 가는 선 · 깊이로 표현한다.
 - 색은 거의 무채색의 차가운 빛 하나로 통일한다. 성단의 고유색은 아주 옅게만 묻힌다(`--chroma-tint`). 과도한 네온, 흔한 사이버펑크 UI, 게임 HUD, 대시보드, 전형적인 AI 서비스 디자인은 피한다.
-- 카테고리와 프로젝트는 데이터다. 코드에 고정하지 않는다. 위치도 저장하지 않고 만든 순서로 계산하므로 공간은 스스로 자란다.
+- 카테고리와 프로젝트는 데이터다. 코드에 고정하지 않는다. 위치는 만든 순서로 계산하므로 공간은 스스로 자란다. 예외: 소유자가 설정 → Space → 성단 위치 조절로 직접 옮긴 성단만 그 자리를 이 브라우저(localStorage, `store/placementStore`)에 기억한다. 기록(IndexedDB)에는 넣지 않는다.
 
 ## 인터랙션 원칙
 
@@ -87,7 +87,7 @@ interaction(입력) ─▶ camera(어디를 보는가) ─▶ scene(배치 → D
 | --- | --- | --- |
 | `camera/` | `cameraRig`(감쇠 · 이동 · 관성 · 시차) · `cameraView`(상태와 원근 투영) | 카메라의 움직임 성격 |
 | `interaction/` | `pointerControls`(마우스) · `touchControls`(터치) · `drag`(공통) | 조작 방식 |
-| `scene/` | `layout`(데이터 → 3D 위치) · `sceneUpdater`(매 프레임 DOM 위치 · `--s` · `--near`) | 배치 규칙 |
+| `scene/` | `layout`(데이터 → 3D 위치) · `arrangement`(옮겨 가는 성단의 지금 자리) · `sceneUpdater`(매 프레임 DOM 위치 · `--s` · `--near`) | 배치 규칙 |
 | `environment/` | `particleField`(입자 배치) · `shaders` · `glRenderer` · `environment`(조립) | 배경과 입자 |
 | `effects/` | `cluster-effects.css` · `node-effects.css` · `PostEffects`(비네트 · 입자감) · `quality`(품질 조절) | 빛 · Hover 반응 · 화면 효과 |
 | `nodes/` | `ClusterNode` · `WorkNode`(구조와 누르는 영역만) | 성단 · 작품의 형태 |
@@ -153,6 +153,7 @@ config/motion.ts ─ motionStore(설정 · 저장 · 시스템 '동작 줄이기
 ## 자주 하는 변경
 
 - **공간의 느낌 조절**(간격 · 깊이 · 카메라의 무게 · 시차 · 입자의 양과 번짐): `config/space.ts`만 고친다.
+- **성단 위치 조절**(설정 → Space): 입력은 `interaction/arrangeControls`(성단을 잡은 입력만 가로챔), 옮겨 가는 자리는 `scene/arrangement`, 입자 무리는 셰이더의 `uMove*`로 함께 옮긴다. 끄는 무게 · 꼬리 길이는 `config/space.ts`의 `arrange`, 들어 올린 모습은 `effects/cluster-effects.css`의 `data-held`.
 - **빛 · Hover 반응만 바꾸기**: `features/space/effects/*.css`. 동작은 그대로 남는다.
 - **커서에 반응하는 거리 · 성단의 숨 · 시차의 크기**: `config/space.ts`의 `interaction.cluster*` · `breath` · `particles.aware` · `camera.parallaxShiftPx`.
 - **작품 ↔ 상세 화면 전환의 시간 · 가감속**: `config/motion.ts`의 `projectMotion.travel` · `travelEase`.

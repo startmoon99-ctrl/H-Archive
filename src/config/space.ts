@@ -66,6 +66,8 @@ export const spaceConfig = {
      * 다가간 뒤 이미지가 상세 화면의 대표 이미지 자리로 넘어간다(features/project/SharedCover).
      */
     projectZoomFactor: 3.2,
+    /** 성단 위치 조절에 들어갈 때 전체 보기 배율에 곱한다. 화면 아래의 막대에 성단이 가리지 않게 조금 물러난다 */
+    arrangeZoomFactor: 0.84,
     /** 인트로가 끝나기 전 멀리서 바라보는 배율 */
     introZoomFactor: 0.22,
     /** 전체 보기에서 이 배율 이상 확대하면 가까운 성단으로 들어간다 */
@@ -90,6 +92,9 @@ export const spaceConfig = {
     wheelSensitivity: 0.0014,
     dragThresholdPx: 6,
     zoomIntentDelayMs: 240,
+    /** 빈 곳을 두 번 탭했다고 보는 간격(ms)과 두 탭 사이의 거리(px). 카메라가 처음 구도로 돌아간다 */
+    doubleTapMs: 320,
+    doubleTapPx: 30,
     /** 놓기 직전에 멈춰 있었다면 관성을 주지 않는다 */
     staleVelocityMs: 80,
     /**
@@ -131,6 +136,11 @@ export const spaceConfig = {
     far: { count: 5200, radius: [5200, 9000], size: [9, 26], alpha: [0.35, 1] },
     /** 공간을 채우는 먼지. 카메라가 이동할 때 곁을 지나간다 */
     dust: { count: 1000, margin: 1500, depth: [-900, 2800], size: [1.3, 3.6], alpha: [0.14, 0.5] },
+    /**
+     * 배경 점과 먼지가 퍼지는 범위를 이 간격(world)으로 끊어 잡는다. 성단을 조금 옮겨도 범위가 그대로라
+     * 입자를 다시 만들 때 배경이 튀지 않는다(성단 위치 조절)
+     */
+    fieldGrid: 1200,
     /** 성단을 이루는 입자 무리 */
     cluster: {
       base: 170,
@@ -201,5 +211,19 @@ export const spaceConfig = {
     /** 그 상태가 이만큼 이어져야 단계를 바꾼다(ms) */
     downAfterMs: 1400,
     upAfterMs: 6000,
+  },
+
+  /** 성단 위치 조절(설정 → Space → 성단 위치 조절) */
+  arrange: {
+    /** 끄는 동안 성단이 손을 따라오는 시간(ms). 클수록 무겁게 끌려온다 */
+    holdFollowMs: 110,
+    /** 놓거나 자리가 바뀐 성단이 새 자리에 내려앉는 시간(ms) */
+    settleFollowMs: 240,
+    /** 무리의 입자가 성단보다 늦게 따라오는 시간(초, 입자마다 이 범위). 빠르게 끌면 꼬리처럼 늘어진다 */
+    trailSec: [0.03, 0.2],
+    /** 꼬리 길이의 상한(world) */
+    trailMax: 240,
+    /** 이만큼 가까워지면 다 왔다고 본다(world) */
+    settleEpsilon: 0.5,
   },
 } as const

@@ -36,6 +36,12 @@ export interface FrameUniforms {
   glow: number
   twinkle: number
   lineColor: [number, number, number]
+  /** 옮겨 가는 성단(MAX_MOVES개): 입자를 만들 때의 중심과 사용 여부(xyzw) · 옮긴 거리(xyz) · 속도(xyz) */
+  moveFrom: Float32Array
+  moveBy: Float32Array
+  moveVelocity: Float32Array
+  /** 입자가 늦게 따라오는 시간 범위(초)와 꼬리 길이 상한(world) */
+  trail: [number, number, number]
 }
 
 export interface GlRenderer {
@@ -178,6 +184,10 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer | null {
       gl.uniform1f(pointUniform('uMaxPoint'), frame.maxPoint)
       gl.uniform1f(pointUniform('uGlow'), frame.glow)
       gl.uniform1f(pointUniform('uTwinkle'), frame.twinkle)
+      gl.uniform4fv(pointUniform('uMoveFrom'), frame.moveFrom)
+      gl.uniform3fv(pointUniform('uMoveBy'), frame.moveBy)
+      gl.uniform3fv(pointUniform('uMoveVelocity'), frame.moveVelocity)
+      gl.uniform3fv(pointUniform('uTrail'), frame.trail)
       gl.bindVertexArray(pointArray)
       gl.drawArrays(gl.POINTS, 0, Math.floor(particleCount * particleFraction))
       gl.bindVertexArray(null)

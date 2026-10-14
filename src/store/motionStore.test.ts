@@ -37,3 +37,33 @@ describe('motion 설정 저장 실패', () => {
     expect(applyMotion).toHaveBeenLastCalledWith(expect.objectContaining({ speed: 1.5 }))
   })
 })
+
+describe('저장된 motion 설정 읽기', () => {
+  const load = async (saved: unknown) => {
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify(saved), setItem: vi.fn() })
+    const { useMotionStore } = await import('./motionStore')
+    const { DEFAULT_MOTION_PRESET, MOTION_SETTINGS_VERSION, motionPresets } = await import('@/config/motion')
+    return { state: useMotionStore.getState(), DEFAULT_MOTION_PRESET, MOTION_SETTINGS_VERSION, motionPresets }
+  }
+
+  it('프리셋 구성이 바뀌기 전에 저장된 선택은 기본 프리셋(CINEMATIC)으로', async () => {
+    const { state, motionPresets } = await load({ presetId: 'calm', settings: { speed: 0.85 }, followSystem: false })
+    expect(state.presetId).toBe('cinematic')
+    expect(state.settings).toEqual(motionPresets.cinematic.settings)
+    expect(state.followSystem).toBe(false)
+  })
+
+  it('고른 프리셋은 프리셋의 지금 값을 쓴다', async () => {
+    const { state, motionPresets } = await load({ presetId: 'swift', settings: { speed: 0.1 }, followSystem: true, version: 2 })
+    expect(state.presetId).toBe('swift')
+    expect(state.settings).toEqual(motionPresets.swift.settings)
+  })
+
+  it('직접 조절한 값은 유지하고, 없는 Feel은 기본으로', async () => {
+    const { state } = await load({ presetId: 'custom', settings: { speed: 1.3, feel: 'removed' }, followSystem: true, version: 2 })
+    expect(state.presetId).toBe('custom')
+    expect(state.settings.speed).toBe(1.3)
+    expect(state.settings.feel).toBe('smooth')
+    expect(state.settings.weight).toBe(1.6)
+  })
+})

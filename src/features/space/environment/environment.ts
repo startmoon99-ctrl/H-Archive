@@ -5,12 +5,14 @@ import type { Point } from '@/types/ui'
 import { readColorToken } from '@/utils/color'
 import { cameraView, focusDistance } from '../camera/cameraView'
 import { createQualityGovernor, renderRatio } from '../effects/quality'
+import type { MovingCluster } from '../scene/arrangement'
 import type { SpaceLayout } from '../scene/layout'
 import { createGlRenderer } from './glRenderer'
 import { buildParticleField } from './particleField'
+import { MAX_MOVES } from './shaders'
 
 const config = spaceConfig.particles
-const { breath, interaction } = spaceConfig
+const { breath, interaction, arrange } = spaceConfig
 const MS_PER_SECOND = 1000
 /** 감싸는 세기가 가장 커지는 시점(전체 시간 대비). 작품의 이미지가 제자리에 닿는 때와 맞춘다 */
 const WRAP_PEAK = 0.62
@@ -29,6 +31,8 @@ export interface EnvironmentFrame {
    * 커서에 밀려나는 반응도 하지 않는다(글을 읽는 데 방해되지 않게).
    */
   behind?: boolean
+  /** 배치와 다른 자리로 옮겨 가는 성단. 입자 무리도 함께 옮긴다 */
+  moving?: MovingCluster[]
 }
 
 function follow(dt: number, timeMs: number): number {
@@ -66,6 +70,26 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
   let overviewAmount = 0
   let wrapStart = -Infinity
   let wrapDuration = 1
+  /** 입자를 만들 때의 성단 중심. 옮겨 가는 성단의 입자를 이 자리에서 지금 자리로 옮겨 그린다 */
+  const builtHomes = new Map<string, [number, number, number]>()
+  const moveFrom = new Float32Array(MAX_MOVES * 4)
+  const moveBy = new Float32Array(MAX_MOVES * 3)
+  const moveVelocity = new Float32Array(MAX_MOVES * 3)
+
+  const fillMoves = (moving: MovingCluster[] | undefined) => {
+    moveFrom.fill(0)
+    moveBy.fill(0)
+    moveVelocity.fill(0)
+    let slot = 0
+    for (const cluster of moving ?? []) {
+      const home = builtHomes.get(cluster.id)
+      if (!home || slot >= MAX_MOVES) continue
+      moveFrom.set([home[0], home[1], home[2], 1], slot * 4)
+      moveBy.set([cluster.x - home[0], cluster.y - home[1], cluster.z - home[2]], slot * 3)
+      moveVelocity.set([cluster.vx, cluster.vy, cluster.vz], slot * 3)
+      slot++
+    }
+  }
 
   const applySize = () => {
     renderer.resize(size.width, size.height, renderRatio(size.width, size.height, quality.current()))
@@ -81,6 +105,8 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
 
     rebuild(layout, density, scale) {
       renderer.setParticles(buildParticleField(layout, density, scale))
+      builtHomes.clear()
+      for (const cluster of layout.clusters) builtHomes.set(cluster.category.id, [cluster.x, cluster.y, cluster.z])
     },
 
     draw(dt, now, frame) {
@@ -93,6 +119,7 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
       const attention = presence * overviewAmount * Math.min(motion.mouseFollow, 1)
 
       // 감싸기: 이미지가 닿을 때까지 다가왔다가 천천히 풀린다
+      fillMoves(frame.moving)
       const wrapProgress = (now - wrapStart) / wrapDuration
       const wrapAmount =
         frame.wrapPoint && wrapProgress < 1
@@ -133,6 +160,10 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
           glow: 0.45 + 0.55 * motion.glow,
           twinkle: config.twinkle * Math.min(motion.background, 1),
           lineColor,
+          moveFrom,
+          moveBy,
+          moveVelocity,
+          trail: [arrange.trailSec[0], arrange.trailSec[1], arrange.trailMax],
         },
         quality.current().particles,
         frame.lines,

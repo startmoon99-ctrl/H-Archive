@@ -1,5 +1,6 @@
 import {
   DEFAULT_MOTION_PRESET,
+  motionFeels,
   motionPresets,
   motionTokens,
   type DurationToken,
@@ -30,7 +31,9 @@ export function applyMotion(settings: MotionSettings): void {
   for (const [name, ms] of Object.entries(motionTokens.duration)) {
     set(`--dur-${name}`, `${Math.round(ms / settings.speed)}ms`)
   }
-  for (const [name, curve] of Object.entries(motionTokens.easing)) {
+  // 가감속 성격: 기준 곡선 위에 고른 성격의 곡선을 덮는다
+  const easing = { ...motionTokens.easing, ...(motionFeels[settings.feel] ?? motionFeels.smooth).easing }
+  for (const [name, curve] of Object.entries(easing)) {
     set(`--ease-${name}`, curve)
   }
   set('--stagger', `${Math.round(motionTokens.stagger / settings.speed)}ms`)
@@ -44,4 +47,5 @@ export function applyMotion(settings: MotionSettings): void {
   set('--ambient-play', settings.background > 0 ? 'running' : 'paused')
 
   root.dataset.motion = settings.intensity === 0 ? 'minimal' : 'full'
+  root.dataset.feel = settings.feel
 }

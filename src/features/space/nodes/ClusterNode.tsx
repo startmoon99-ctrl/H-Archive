@@ -25,6 +25,7 @@ export const ClusterNode = memo(function ClusterNode({ cluster, state, register,
     <div
       ref={(element) => register(category.id, element)}
       className="cluster"
+      data-id={category.id}
       data-state={state}
       style={cssVars({ hue: category.hue, r: radius })}
     >
@@ -33,7 +34,11 @@ export const ClusterNode = memo(function ClusterNode({ cluster, state, register,
         className="cluster__hit"
         tabIndex={state === 'focused' ? -1 : 0}
         aria-label={`${category.name} 성단, 창작물 ${nodes.length}개`}
-        onClick={() => onSelect(category.id)}
+        onClick={(event) => {
+          // 마우스 · 터치로 눌렀으면 초점을 놓는다. 남겨 두면 뒤이은 키 입력(Esc 등)에 키보드용 초점 고리가 떠오른다
+          if (event.detail > 0) event.currentTarget.blur()
+          onSelect(category.id)
+        }}
       />
       <span className="cluster__halo" />
       <span className="cluster__ring" />

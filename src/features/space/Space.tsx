@@ -9,6 +9,7 @@ import { onTick } from '@/motion/ticker'
 import { provideWorkLocation } from '@/motion/travel'
 import { useArchiveStore } from '@/store/archiveStore'
 import { selectActiveMotion, useMotionStore } from '@/store/motionStore'
+import { usePlacementStore } from '@/store/placementStore'
 import { useUiStore, type TravelOrigin } from '@/store/uiStore'
 import type { ID } from '@/types/archive'
 import { cssVars } from '@/utils/css'
@@ -17,14 +18,17 @@ import { cameraView, type CameraGoal } from './camera/cameraView'
 import { PostEffects } from './effects/PostEffects'
 import { createEnvironment, type Environment } from './environment/environment'
 import { particleFieldKey } from './environment/particleField'
+import { attachArrangeControls } from './interaction/arrangeControls'
 import type { ControlOptions } from './interaction/drag'
 import { attachPointerControls } from './interaction/pointerControls'
 import { attachTouchControls } from './interaction/touchControls'
 import { ClusterNode, type ClusterState } from './nodes/ClusterNode'
 import { WorkNode, type CaptionPlacement, type NodeState } from './nodes/WorkNode'
-import { buildSpaceLayout, type ClusterLayout } from './scene/layout'
+import { createArrangement } from './scene/arrangement'
+import { buildSpaceLayout, placementOf, type ClusterLayout } from './scene/layout'
 import { createSceneUpdater, type SceneElements } from './scene/sceneUpdater'
 import { ClusterTitle } from './ui/ClusterTitle'
+import { ArrangeBar } from './ui/ArrangeBar'
 import { ProjectRail } from './ui/ProjectRail'
 import { SpaceSummary } from './ui/SpaceSummary'
 import './space.css'
@@ -89,6 +93,9 @@ export function Space() {
   const setBornProject = useUiStore((state) => state.setBornProject)
   const receiving = useUiStore((state) => state.isDraggingFiles)
   const awayProjectId = useUiStore((state) => state.awayProjectId)
+  const arranging = useUiStore((state) => state.arranging)
+  const viewResetRun = useUiStore((state) => state.viewResetRun)
+  const placements = usePlacementStore((state) => state.placements)
 
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -100,12 +107,18 @@ export function Space() {
   const returnedRef = useRef<ID | null>(null)
   /** 작품을 누르기 직전의 카메라. 닫으면 이 자리로 되돌아온다 */
   const departureRef = useRef<CameraGoal | null>(null)
+  /** 직전에 카메라를 옮겼을 때 성단 위치 조절 중이었는가 */
+  const arrangingRef = useRef(arranging)
   const [elements] = useState<SceneElements>(() => ({ clusters: new Map(), nodes: new Map() }))
   const [rig] = useState(createCameraRig)
   const [updater] = useState(() => createSceneUpdater(elements))
+  const [arrangement] = useState(createArrangement)
   const [active, setActive] = useState<ActiveNode | null>(null)
 
-  const layout = useMemo(() => buildSpaceLayout(categories, projects, viewport), [categories, projects, viewport])
+  const layout = useMemo(
+    () => buildSpaceLayout(categories, projects, viewport, placements),
+    [categories, projects, viewport, placements],
+  )
   const focused: ClusterLayout | null =
     layout.clusters.find((cluster) => cluster.category.id === route.categoryId) ?? null
   const focusedId = focused?.category.id ?? null
@@ -116,7 +129,7 @@ export function Space() {
     if (introPhase === 'playing') {
       return { ...layout.overview, zoom: layout.overview.zoom * camera.introZoomFactor }
     }
-    if (!focused) return layout.overview
+    if (!focused) return arranging ? { ...layout.overview, zoom: layout.overview.zoom * camera.arrangeZoomFactor } : layout.overview
     // 작품을 열면 카메라가 그 작품의 자리(x · y · z)로 다가간다. 주변은 깊이에 따라 저절로 시차가 생긴다.
     if (route.view === 'project') {
       const work = focused.nodes.find((node) => node.project.id === route.projectId)
@@ -124,11 +137,14 @@ export function Space() {
       return work ? { x: work.x, y: work.y, z: work.z, zoom } : { ...focused.focus, zoom }
     }
     return focused.focus
-  }, [introPhase, layout, focused, route.view, route.projectId])
+  }, [introPhase, layout, focused, route.view, route.projectId, arranging])
 
   useEffect(() => {
     rig.setViewport(viewport.width, viewport.height)
   }, [rig, viewport.width, viewport.height])
+
+  // 지금 화면의 처음 구도(정면). 메인 화면의 Esc · 빈 곳 더블클릭이 이리로 되돌린다
+  const home = useMemo(() => ({ ...goal, yaw: 0, pitch: 0 }), [goal])
 
   useEffect(() => {
     rig.setLimits({
@@ -146,6 +162,11 @@ export function Space() {
     const before = previousRef.current
     const { route, introPhase, introRevealMs } = travelContext.current
     previousRef.current = { view: route.view, categoryId: route.categoryId, projectId: route.projectId }
+    // 성단 위치 조절 중에는 성단을 옮겨 전체 보기의 범위가 달라져도 카메라가 따라 움직이지 않는다.
+    // 들어올 때는 전체 보기로, 마치면 바뀐 배치가 다 보이는 자리로 옮겨 간다
+    const wasArranging = arrangingRef.current
+    arrangingRef.current = arranging
+    if (arranging && wasArranging) return
     // 같은 성단 안에서 작품을 열면 그 작품으로 다가가고, 닫으면 누르기 직전의 자리로 그대로 물러난다
     const sameCluster = before.categoryId === route.categoryId
     const opening = sameCluster && before.view === 'system' && route.view === 'project'
@@ -173,10 +194,21 @@ export function Space() {
     }
     if (returning) departureRef.current = null
     // 좌표가 바뀔 때만 이동한다. 단계/시간만 바뀌어 진행 중인 이동이 재시작되지 않게 최신 ref로 읽는다.
-  }, [rig, goalX, goalY, goalZ, goalZoom, travelContext])
+  }, [rig, goalX, goalY, goalZ, goalZoom, travelContext, arranging])
 
   // 최신 값은 ref로 읽어 루프와 조작을 다시 걸지 않는다
-  const latest = useLatest({ route, layout, focused, focusedId, viewport, nav, activeId: active?.id ?? null })
+  const latest = useLatest({ route, layout, focused, focusedId, viewport, nav, home, activeId: active?.id ?? null })
+
+  // 처음 구도로 부드럽게 돌아간다(메인 화면의 Esc · 빈 곳 더블클릭 · 두 번 탭). 상세 화면에서는 하지 않는다
+  const resetView = useCallback(() => {
+    const current = latest.current
+    if (current.route.view === 'project') return
+    rig.flyTo(current.home, motionMs('travel'))
+  }, [rig, latest])
+
+  useEffect(() => {
+    if (viewResetRun > 0) resetView()
+  }, [viewResetRun, resetView])
 
   // ── 조작: 마우스와 터치를 각각 붙인다 ───────────────────────────────────
   useEffect(() => {
@@ -186,6 +218,8 @@ export function Space() {
       // 전체 보기에서 충분히 확대하면 가까운 성단으로 들어가고, 성단에서 충분히 축소하면 나온다
       onZoomSettled: (zoom) => {
         const current = latest.current
+        // 성단 위치 조절 중에는 확대해도 성단으로 들어가지 않는다
+        if (useUiStore.getState().arranging) return
         if (current.route.view === 'galaxy' && zoom >= current.layout.overview.zoom * camera.enterFactor) {
           const distanceTo = (cluster: ClusterLayout) =>
             Math.hypot(cluster.x - cameraView.x, cluster.y - cameraView.y)
@@ -199,6 +233,11 @@ export function Space() {
           current.nav.toGalaxy()
         }
       },
+      // 빈 곳을 두 번 누르면: 성단 안에서는 메인 화면으로 나가고, 메인 화면에서는 처음 구도로 돌아간다
+      onDoubleTap: () => {
+        if (latest.current.route.view === 'system') latest.current.nav.toGalaxy()
+        else resetView()
+      },
     }
     const detachPointer = attachPointerControls(stage, rig, options)
     const detachTouch = attachTouchControls(stage, rig, options)
@@ -206,7 +245,23 @@ export function Space() {
       detachPointer()
       detachTouch()
     }
-  }, [rig, latest])
+  }, [rig, latest, resetView])
+
+  // 성단 위치 조절: 성단을 잡아 끌면 따라오고, 놓은 자리는 저장된다(배치가 그 자리를 따른다)
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage || !arranging) return
+    return attachArrangeControls(stage, arrangement, {
+      positionOf: (id) => {
+        const cluster = latest.current.layout.clusters.find((item) => item.category.id === id)
+        return arrangement.positionOf(id) ?? (cluster ? { x: cluster.x, y: cluster.y, z: cluster.z } : null)
+      },
+      onDrop: (id, at) => {
+        const { width, height } = latest.current.viewport
+        usePlacementStore.getState().place(id, placementOf(at.x, at.y, at.z, height > width))
+      },
+    })
+  }, [arranging, arrangement, latest])
 
   // ── 환경: 입자 ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -255,6 +310,7 @@ export function Space() {
     return onTick((dt, now) => {
       rig.update(dt, now)
       const current = latest.current
+      arrangement.update(current.layout, dt)
       const lineVertices = updater.update(
         {
           layout: current.layout,
@@ -262,6 +318,7 @@ export function Space() {
           activeNodeId: current.activeId,
           touchUi: current.viewport.touchUi,
           overview: current.route.view === 'galaxy',
+          arrangement,
         },
         dt,
         now,
@@ -272,9 +329,10 @@ export function Space() {
         lineVertices,
         overview: current.route.view === 'galaxy',
         wrapPoint: returned && { x: returned.x + returned.width / 2, y: returned.y + returned.height / 2 },
+        moving: arrangement.moving(),
       })
     })
-  }, [covered, rig, updater, latest])
+  }, [covered, rig, updater, arrangement, latest])
 
   // 상세 화면이 작품의 이미지를 이어받고 돌려보낼 자리를 알려 준다
   useEffect(
@@ -353,6 +411,14 @@ export function Space() {
     [latest, activateNode],
   )
 
+  // 성단 위치 조절 중에는 성단을 눌러도 들어가지 않는다(끌기만 한다)
+  const selectCluster = useCallback(
+    (id: ID) => {
+      if (!useUiStore.getState().arranging) latest.current.nav.toSystem(id)
+    },
+    [latest],
+  )
+
   const browseNode = useCallback((id: ID) => setActive({ id, caption: { side: 'right', align: 'center' } }), [])
   const openFromRail = useCallback(
     (id: ID, element: HTMLElement) => latest.current.nav.toProject(id, originOf(element)),
@@ -373,6 +439,7 @@ export function Space() {
         data-covered={covered}
         data-receiving={receiving}
         data-intro={introPhase}
+        data-arranging={arranging}
         style={cssVars({ 'handoff-delay': `${Math.round(motionMs(projectMotion.approach) * projectMotion.handoffAt)}ms` })}
       >
         <canvas ref={canvasRef} className="space__canvas" aria-hidden="true" />
@@ -390,7 +457,7 @@ export function Space() {
               cluster={cluster}
               state={clusterState(cluster)}
               register={registerCluster}
-              onSelect={nav.toSystem}
+              onSelect={selectCluster}
             />
           ))}
           {layout.clusters.flatMap((cluster) =>
@@ -417,6 +484,7 @@ export function Space() {
         <PostEffects />
       </div>
 
+      {arranging && <ArrangeBar touchUi={viewport.touchUi} />}
       {ready && introPhase !== 'playing' && (
         <SpaceSummary empty={categories.length === 0} visible={route.view === 'galaxy'} />
       )}

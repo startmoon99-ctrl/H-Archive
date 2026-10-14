@@ -1,6 +1,7 @@
 import { CHROME } from '@/config/layout'
 import { spaceConfig } from '@/config/space'
 import type { Viewport } from '@/hooks/useViewport'
+import type { Placement, Placements } from '@/store/placementStore'
 import type { Category, Project } from '@/types/archive'
 import { clamp, degToRad } from '@/utils/math'
 import { projectHue } from '@/utils/project'
@@ -11,7 +12,13 @@ import type { Bounds, CameraGoal } from '../camera/cameraView'
  * 데이터 → 공간 배치. 위치를 저장하지 않고 만든 순서와 config만으로 계산하므로
  * 성단과 작품이 늘어나면 공간이 바깥으로 자란다.
  * 성단은 나선 위에, 작품은 성단 중심에서 바깥으로 퍼지는 씨앗 무늬(오래된 것이 안쪽)에 놓인다.
+ * 직접 옮긴 성단(store/placementStore)만 그 자리에 놓이고, 나머지는 계산한 자리 그대로다.
  */
+
+/** 화면 위치(world) → 저장하는 자리. 세로 화면에서는 가로 · 세로가 바뀌어 놓이므로 되돌려 적는다 */
+export function placementOf(x: number, y: number, z: number, portrait: boolean): Placement {
+  return portrait ? { along: y, across: x, z } : { along: x, across: y, z }
+}
 
 export interface PlacedNode {
   project: Project
@@ -118,7 +125,12 @@ function freeArea(viewport: Viewport, withRail: boolean) {
   }
 }
 
-export function buildSpaceLayout(categories: Category[], projects: Project[], viewport: Viewport): SpaceLayout {
+export function buildSpaceLayout(
+  categories: Category[],
+  projects: Project[],
+  viewport: Viewport,
+  placements: Placements = {},
+): SpaceLayout {
   const portrait = viewport.height > viewport.width
   const ordered = [...categories].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   const drafts = ordered.map((category) =>
@@ -137,12 +149,13 @@ export function buildSpaceLayout(categories: Category[], projects: Project[], vi
   const clusters: ClusterLayout[] = drafts.map((draft, index) => {
     const distance = spacing * Math.sqrt(index + clusterConfig.startIndex)
     const angle = degToRad(index * clusterConfig.goldenAngleDeg + clusterConfig.rotationDeg)
-    const along = Math.cos(angle) * distance
-    const across = Math.sin(angle) * distance * clusterConfig.squash
+    const placed = placements[draft.category.id]
+    const along = placed?.along ?? Math.cos(angle) * distance
+    const across = placed?.across ?? Math.sin(angle) * distance * clusterConfig.squash
     // 세로 화면에서는 세로로 길게 놓는다
     const x = portrait ? across : along
     const y = portrait ? along : across
-    const z = (seededRandom(`depth:${draft.category.id}`)() - 0.5) * clusterConfig.depthRange
+    const z = placed?.z ?? (seededRandom(`depth:${draft.category.id}`)() - 0.5) * clusterConfig.depthRange
 
     const zoom = clamp(
       Math.min(

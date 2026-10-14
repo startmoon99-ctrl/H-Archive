@@ -98,4 +98,14 @@ export function createZoomIntent(rig: CameraRig, onSettled: (zoom: number) => vo
 
 export interface ControlOptions {
   onZoomSettled: (zoom: number) => void
+  /** 빈 곳을 두 번 눌렀다(더블클릭 · 두 번 탭) */
+  onDoubleTap: () => void
+}
+
+/** 누르면 저마다 할 일이 있는 요소. 이 위를 두 번 눌러도 카메라를 되돌리지 않는다 */
+const INTERACTIVE = 'button, a, input, textarea, select, [role="button"]'
+
+/** 빈 곳(공간 자체)을 눌렀는가 */
+export function isEmptySpace(target: EventTarget | null): boolean {
+  return !(target instanceof Element && target.closest(INTERACTIVE))
 }

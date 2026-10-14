@@ -1,0 +1,62 @@
+/* 성단 위치 조절 중 화면 아래의 막대. 공간을 가리지 않게 얇고 어둡게 떠 있다 */
+.arrange-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-5) + var(--safe-bottom));
+  z-index: var(--z-hud);
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  max-width: calc(100vw - var(--space-4) * 2);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: rgb(var(--space-rgb) / 0.72);
+  backdrop-filter: blur(14px);
+  translate: -50% 0;
+}
+
+.arrange-bar__hint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.arrange-bar__hint small {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+}
+
+.arrange-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* 좁은 화면: 안내를 위에, 버튼을 아래에 둔다 */
+:root[data-layout='mobile'] .arrange-bar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  width: calc(100vw - var(--space-4) * 2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+:root[data-layout='mobile'] .arrange-bar__hint {
+  white-space: normal;
+  text-align: center;
+}
+
+:root[data-layout='mobile'] .arrange-bar__actions {
+  justify-content: space-between;
+}
+
+/* 터치: 버튼은 누르기 충분한 크기로, 막대 폭을 나눠 쓴다 */
+:root[data-ui='touch'] .arrange-bar__actions > * {
+  flex: 1;
+  min-height: var(--tap-target);
+}

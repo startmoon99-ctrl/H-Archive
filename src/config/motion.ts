@@ -50,10 +50,63 @@ export interface MotionSettings {
   /** 전환 속도. 클수록 빠르다. */
   speed: number
   mouseFollow: number
+  /** 카메라의 무게. 클수록 입력을 늦게 따라오고 놓은 뒤 오래 미끄러진다 */
+  weight: number
+  /** 움직임의 가감속 성격(motionFeels) */
+  feel: MotionFeelId
   previewAutoplay: boolean
 }
 
-export type MotionPresetId = 'calm' | 'cinematic' | 'immersive' | 'minimal'
+export type MotionFeelId = 'smooth' | 'float' | 'snappy' | 'elastic'
+
+export interface MotionFeel {
+  id: MotionFeelId
+  label: string
+  /** motionTokens.easing에서 바꿀 곡선. 화면의 모든 전환 · 등장 · 반응이 이 곡선을 쓴다 */
+  easing: Partial<Record<keyof typeof motionTokens.easing, string>>
+}
+
+export const motionFeels: Record<MotionFeelId, MotionFeel> = {
+  /** 기준: motionTokens.easing 그대로 */
+  smooth: { id: 'smooth', label: 'Smooth', easing: {} },
+  /** 천천히 떠올라 길게 가라앉는다. 튕김 없음 */
+  float: {
+    id: 'float',
+    label: 'Float',
+    easing: {
+      standard: 'cubic-bezier(0.45, 0, 0.25, 1)',
+      enter: 'cubic-bezier(0.33, 0, 0.1, 1)',
+      exit: 'cubic-bezier(0.55, 0, 0.75, 0.3)',
+      cinematic: 'cubic-bezier(0.76, 0, 0.24, 1)',
+      spring: 'cubic-bezier(0.37, 0, 0.2, 1)',
+    },
+  },
+  /** 바로 튀어 나가 짧게 멈춘다 */
+  snappy: {
+    id: 'snappy',
+    label: 'Snappy',
+    easing: {
+      standard: 'cubic-bezier(0.3, 0, 0, 1)',
+      enter: 'cubic-bezier(0.05, 0.75, 0.1, 1)',
+      exit: 'cubic-bezier(0.4, 0, 1, 0.6)',
+      cinematic: 'cubic-bezier(0.2, 0.6, 0.1, 1)',
+      spring: 'cubic-bezier(0.2, 1.4, 0.4, 1)',
+    },
+  },
+  /** 목표를 지나쳤다가 탄성 있게 돌아온다 */
+  elastic: {
+    id: 'elastic',
+    label: 'Elastic',
+    easing: {
+      standard: 'cubic-bezier(0.3, 1.25, 0.5, 1)',
+      enter: 'cubic-bezier(0.34, 1.5, 0.5, 1)',
+      cinematic: 'cubic-bezier(0.6, -0.15, 0.25, 1.2)',
+      spring: 'cubic-bezier(0.3, 2, 0.5, 1)',
+    },
+  },
+}
+
+export type MotionPresetId = 'cinematic' | 'immersive' | 'calm' | 'drift' | 'swift' | 'elastic' | 'minimal'
 
 export interface MotionPreset {
   id: MotionPresetId
@@ -62,52 +115,113 @@ export interface MotionPreset {
   settings: MotionSettings
 }
 
+/** 프리셋끼리 느낌이 확실히 갈리도록 속도 · 무게 · 가감속 성격을 크게 벌려 둔다. 화면에는 이 순서로 놓인다. */
 export const motionPresets: Record<MotionPresetId, MotionPreset> = {
-  calm: {
-    id: 'calm',
-    label: 'CALM',
-    description: '느린 움직임, 적은 입자, 약한 시차',
-    settings: {
-      intensity: 0.6,
-      parallax: 0.4,
-      particles: 0.5,
-      glow: 0.7,
-      tilt: 0.4,
-      background: 0.5,
-      speed: 0.85,
-      mouseFollow: 0.4,
-      previewAutoplay: true,
-    },
-  },
   cinematic: {
     id: 'cinematic',
     label: 'CINEMATIC',
-    description: '강한 줌, 깊은 시차, 느리고 무게감 있는 전환',
+    description: '깊은 시차, 느리고 무게감 있는 카메라와 전환',
     settings: {
-      intensity: 1.1,
+      intensity: 1.2,
       parallax: 1.2,
-      particles: 0.9,
-      glow: 1,
+      particles: 1,
+      glow: 1.1,
       tilt: 0.8,
       background: 0.7,
       speed: 0.7,
-      mouseFollow: 0.7,
+      mouseFollow: 0.8,
+      weight: 1.6,
+      feel: 'smooth',
       previewAutoplay: true,
     },
   },
   immersive: {
     id: 'immersive',
     label: 'IMMERSIVE',
-    description: '마우스 반응과 입자, 공간 움직임을 강화',
+    description: '많은 입자, 강한 마우스 반응과 빛, 살아 움직이는 공간',
     settings: {
-      intensity: 1.2,
-      parallax: 1.4,
+      intensity: 1.3,
+      parallax: 1.5,
       particles: 1.5,
-      glow: 1.3,
-      tilt: 1.2,
-      background: 1.2,
+      glow: 1.4,
+      tilt: 1.3,
+      background: 1.3,
       speed: 1,
       mouseFollow: 1.5,
+      weight: 1,
+      feel: 'smooth',
+      previewAutoplay: true,
+    },
+  },
+  drift: {
+    id: 'drift',
+    label: 'DRIFT',
+    description: '꿈결처럼 떠다니는 공간, 짙은 빛 번짐, 오래 미끄러지는 카메라',
+    settings: {
+      intensity: 1,
+      parallax: 1,
+      particles: 1.2,
+      glow: 1.5,
+      tilt: 0.6,
+      background: 1.5,
+      speed: 0.55,
+      mouseFollow: 1,
+      weight: 2.4,
+      feel: 'float',
+      previewAutoplay: true,
+    },
+  },
+  swift: {
+    id: 'swift',
+    label: 'SWIFT',
+    description: '빠르고 또렷한 반응, 가벼운 카메라, 짧은 전환',
+    settings: {
+      intensity: 0.8,
+      parallax: 0.8,
+      particles: 0.8,
+      glow: 0.8,
+      tilt: 0.6,
+      background: 0.9,
+      speed: 1.7,
+      mouseFollow: 1.1,
+      weight: 0.45,
+      feel: 'snappy',
+      previewAutoplay: true,
+    },
+  },
+  elastic: {
+    id: 'elastic',
+    label: 'ELASTIC',
+    description: '튕기듯 살아 있는 반응, 크게 기우는 카드, 탄성 있는 등장',
+    settings: {
+      intensity: 1.5,
+      parallax: 1.2,
+      particles: 1,
+      glow: 1.1,
+      tilt: 1.5,
+      background: 1,
+      speed: 1.1,
+      mouseFollow: 1.5,
+      weight: 0.8,
+      feel: 'elastic',
+      previewAutoplay: true,
+    },
+  },
+  calm: {
+    id: 'calm',
+    label: 'CALM',
+    description: '느린 움직임, 적은 입자, 약한 시차',
+    settings: {
+      intensity: 0.5,
+      parallax: 0.35,
+      particles: 0.45,
+      glow: 0.6,
+      tilt: 0.3,
+      background: 0.35,
+      speed: 0.8,
+      mouseFollow: 0.35,
+      weight: 1.3,
+      feel: 'float',
       previewAutoplay: true,
     },
   },
@@ -124,12 +238,16 @@ export const motionPresets: Record<MotionPresetId, MotionPreset> = {
       background: 0,
       speed: 2,
       mouseFollow: 0,
+      weight: 1,
+      feel: 'smooth',
       previewAutoplay: false,
     },
   },
 }
 
 export const DEFAULT_MOTION_PRESET: MotionPresetId = 'cinematic'
+/** 저장 형식의 버전. 프리셋 구성을 크게 바꿔 저장된 선택을 한 번 기본 프리셋으로 되돌릴 때 올린다 */
+export const MOTION_SETTINGS_VERSION = 2
 /** 시스템의 '동작 줄이기'를 따를 때 적용하는 프리셋 */
 export const REDUCED_MOTION_PRESET: MotionPresetId = 'minimal'
 
@@ -158,6 +276,7 @@ export const motionControls: MotionControl[] = [
   { key: 'background', label: 'Background Motion', hint: '떠 있는 움직임 · 반짝임 · 표류', ...AMOUNT },
   { key: 'speed', label: 'Transition Speed', hint: '화면 전환 속도', min: 0.5, max: 2, step: 0.05 },
   { key: 'mouseFollow', label: 'Mouse Follow', hint: '커서를 따라오는 빛과 버튼 반응', ...AMOUNT },
+  { key: 'weight', label: 'Camera Weight', hint: '카메라가 따라오는 무게와 놓은 뒤 미끄러지는 길이', min: 0.4, max: 2.5, step: 0.05 },
 ]
 
 function easeOutQuart(t: number): number {

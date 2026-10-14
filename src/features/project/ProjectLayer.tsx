@@ -18,6 +18,18 @@ import './project.css'
 
 /** 출발점이 없을 때 화면 가운데에서 열리는 창의 크기(화면 대비 비율) */
 const CENTER_OPENING = 0.16
+/** 이 위를 더블클릭하면 메인 화면으로 나가지 않는다(누를 것 · 볼 것) */
+const NOT_BACKGROUND = 'button, a, input, textarea, select, label, img, video, audio, canvas, [role="button"]'
+
+/**
+ * 상세 화면의 배경을 더블클릭하면 메인 화면(전체 보기)으로 부드럽게 나간다.
+ * 글을 더블클릭해 단어를 고른 경우와 버튼 · 링크 · 이미지 · 영상 위는 그대로 둔다.
+ */
+function isBackgroundDoubleClick(event: React.MouseEvent): boolean {
+  const target = event.target
+  if (target instanceof Element && target.closest(NOT_BACKGROUND)) return false
+  return !window.getSelection()?.toString().trim()
+}
 
 interface ProjectDetailProps {
   projectId: ID
@@ -84,6 +96,11 @@ function ProjectDetail({ projectId, state }: ProjectDetailProps) {
         }
         data-handoff={handoff}
         data-cover={coverAway ? 'away' : 'here'}
+        // 이 작품의 성단이 아닌 곳(메인 화면 등)으로 나갈 때는 작품 자리로 접히지 않고 그 자리에서 흐려진다
+        data-exit={state !== 'open' && !returning ? 'fade' : undefined}
+        onDoubleClick={(event) => {
+          if (state === 'open' && isBackgroundDoubleClick(event)) nav.toGalaxy()
+        }}
         style={cssVars({
           hue: category?.hue,
           // frame 방식: 눌렀던 프레임의 자리에서 화면이 커지며 열린다. 검색이나 주소로 바로 왔다면 화면 가운데에서 연다.

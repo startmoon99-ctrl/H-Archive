@@ -1,6 +1,7 @@
-import { Clapperboard } from 'lucide-react'
+import { ChevronDown, Clapperboard } from 'lucide-react'
+import { useId, useState, type CSSProperties } from 'react'
 import { Button } from '@/components/Button'
-import { REDUCED_MOTION_PRESET, motionControls, motionPresets } from '@/config/motion'
+import { REDUCED_MOTION_PRESET, motionControls, motionFeels, motionPresets } from '@/config/motion'
 import { useMotionStore } from '@/store/motionStore'
 import { useUiStore } from '@/store/uiStore'
 
@@ -15,6 +16,8 @@ export function MotionSettings() {
   const systemReduced = useMotionStore((state) => state.systemReduced)
   const { setPreset, setSetting, setFollowSystem } = useMotionStore.getState()
   const replayIntro = useUiStore((state) => state.replayIntro)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const advancedId = useId()
 
   // 시스템 설정을 따르는 동안에는 아래 값이 적용되지 않는다
   const overridden = systemReduced && followSystem
@@ -56,44 +59,74 @@ export function MotionSettings() {
         ))}
       </div>
 
-      <details className="settings__advanced">
-        <summary>
-          Advanced Settings
+      <div className="settings__advanced" data-open={advancedOpen}>
+        <button
+          type="button"
+          className="settings__advanced-toggle"
+          aria-expanded={advancedOpen}
+          aria-controls={advancedId}
+          onClick={() => setAdvancedOpen((open) => !open)}
+        >
+          <span>Advanced Settings</span>
           {presetId === 'custom' && <span className="settings__custom">직접 조절함</span>}
-        </summary>
-        <div className="settings__controls">
-          {motionControls.map((control) => (
-            <label key={control.key} className="settings__control">
+          <ChevronDown className="settings__advanced-chevron" size={16} strokeWidth={1.5} aria-hidden />
+        </button>
+        <div className="settings__advanced-body" id={advancedId} inert={!advancedOpen}>
+          <div className="settings__controls">
+            <div className="settings__control" style={{ '--i': 0 } as CSSProperties}>
               <span>
-                {control.label}
-                <small>{control.hint}</small>
+                Motion Feel
+                <small>움직임의 가감속 성격</small>
               </span>
-              <output>{settings[control.key].toFixed(2)}</output>
+              <div className="settings__segments" role="radiogroup" aria-label="Motion Feel">
+                {Object.values(motionFeels).map((feel) => (
+                  <button
+                    key={feel.id}
+                    type="button"
+                    role="radio"
+                    className="settings__segment"
+                    aria-checked={settings.feel === feel.id}
+                    disabled={overridden}
+                    onClick={() => setSetting('feel', feel.id)}
+                  >
+                    {feel.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {motionControls.map((control, index) => (
+              <label key={control.key} className="settings__control" style={{ '--i': index + 1 } as CSSProperties}>
+                <span>
+                  {control.label}
+                  <small>{control.hint}</small>
+                </span>
+                <output>{settings[control.key].toFixed(2)}</output>
+                <input
+                  type="range"
+                  min={control.min}
+                  max={control.max}
+                  step={control.step}
+                  value={settings[control.key]}
+                  disabled={overridden}
+                  onChange={(event) => setSetting(control.key, Number(event.target.value))}
+                />
+              </label>
+            ))}
+            <label className="settings__toggle" style={{ '--i': motionControls.length + 1 } as CSSProperties}>
+              <span>
+                Preview Autoplay
+                <small>마우스를 올리거나 선택하면 미리보기 영상을 재생</small>
+              </span>
               <input
-                type="range"
-                min={control.min}
-                max={control.max}
-                step={control.step}
-                value={settings[control.key]}
+                type="checkbox"
+                checked={settings.previewAutoplay}
                 disabled={overridden}
-                onChange={(event) => setSetting(control.key, Number(event.target.value))}
+                onChange={(event) => setSetting('previewAutoplay', event.target.checked)}
               />
             </label>
-          ))}
-          <label className="settings__toggle">
-            <span>
-              Preview Autoplay
-              <small>마우스를 올리거나 선택하면 미리보기 영상을 재생</small>
-            </span>
-            <input
-              type="checkbox"
-              checked={settings.previewAutoplay}
-              disabled={overridden}
-              onChange={(event) => setSetting('previewAutoplay', event.target.checked)}
-            />
-          </label>
+          </div>
         </div>
-      </details>
+      </div>
 
       <Button icon={Clapperboard} variant="ghost" size="sm" onClick={replayIntro}>
         인트로 다시 보기
