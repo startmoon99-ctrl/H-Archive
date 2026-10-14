@@ -127,6 +127,11 @@ export function Space() {
   const focusedId = focused?.category.id ?? null
   const covered = useCovered(route.view === 'project')
 
+  // 가만히 있을 때의 공전: 메인 화면(전체 보기)에서만. 성단 · 상세 화면 · 인트로 · 성단 위치 조절 중에는 멈춘다
+  useEffect(() => {
+    rig.setIdleOrbit(route.view === 'galaxy' && introPhase === 'done' && !arranging && !covered)
+  }, [rig, route.view, introPhase, arranging, covered])
+
   // ── 카메라: 주소가 요구하는 목표로 이동한다 ─────────────────────────────
   const goal = useMemo<CameraGoal>(() => {
     if (introPhase === 'playing') {

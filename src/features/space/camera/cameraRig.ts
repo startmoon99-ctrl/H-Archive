@@ -5,9 +5,12 @@ import { clamp, degToRad } from '@/utils/math'
 import { cameraView, orient, type Bounds, type CameraGoal } from './cameraView'
 
 const config = spaceConfig.camera
+const idleConfig = config.idleOrbit
 const { orbitDegPerPx, orbitPitchLimitDeg } = spaceConfig.interaction
 const PITCH_LIMIT = degToRad(orbitPitchLimitDeg)
 const TAU = Math.PI * 2
+/** 새 방향을 고를 때 지금 방향과 충분히 다른 것을 찾아보는 횟수 */
+const TURN_TRIES = 8
 
 export interface CameraLimits {
   zoomMin: number
@@ -46,6 +49,11 @@ export interface CameraRig {
   zoomBy(factor: number): void
   /** 사용자가 맞춰 둔 배율(감쇠 전의 목표값) */
   goalZoom(): number
+  /**
+   * 가만히 있을 때의 공전을 허락한다(전체 보기 · 인트로 뒤 · 성단 위치 조절이 아닐 때).
+   * 허락돼 있어도 입력이 끊긴 지 config.idleOrbit.delayMs가 지나야 시작한다
+   */
+  setIdleOrbit(allowed: boolean): void
   update(dt: number, now: number): void
 }
 
@@ -79,6 +87,79 @@ export function createCameraRig(): CameraRig {
   let limits: CameraLimits | null = null
   let tween: Tween | null = null
   let held = false
+
+  /**
+   * 가만히 있을 때의 공전. 각도는 시작한 자리(anchor)를 중심으로 한 타원 안에서 떠돈다.
+   * heading은 그 타원을 원으로 편 공간에서의 진행 방향(라디안)이고, 정해 둔 목표(target) 쪽으로 천천히 돌아선다.
+   */
+  const idle = {
+    allowed: false,
+    /** 마지막 입력 시각(performance.now) */
+    inputAt: 0,
+    /** 0 ~ 1. 공전이 붙어 있는 정도 */
+    amount: 0,
+    heading: 0,
+    target: 0,
+    turnAt: 0,
+    anchorYaw: 0,
+    anchorPitch: 0,
+  }
+  const yawRange = degToRad(idleConfig.yawRangeDeg)
+  const pitchRange = degToRad(idleConfig.pitchRangeDeg)
+
+  /** 입력이 들어왔다: 공전을 멈추고 대기 시간을 다시 센다 */
+  const touch = () => {
+    idle.inputAt = performance.now()
+  }
+
+  /** 시작한 각도 기준으로 지금 얼마나 벗어나 있는가(타원을 원으로 편 값, 1이 가장자리) */
+  const idleOffset = () => ({
+    x: wrapAngle(goal.yaw - idle.anchorYaw) / yawRange,
+    y: (goal.pitch - idle.anchorPitch) / pitchRange,
+  })
+
+  /** 범위 안의 한 지점을 골라 그쪽으로 향한다. 지금 방향과 충분히 다른 것을 고른다 */
+  const chooseHeading = (now: number) => {
+    const offset = idleOffset()
+    const minTurn = degToRad(idleConfig.minTurnDeg)
+    let heading = idle.heading
+    for (let attempt = 0; attempt < TURN_TRIES; attempt++) {
+      const radius = Math.sqrt(Math.random()) * 0.85
+      const angle = Math.random() * TAU
+      heading = Math.atan2(Math.sin(angle) * radius - offset.y, Math.cos(angle) * radius - offset.x)
+      if (Math.abs(wrapAngle(heading - idle.heading)) >= minTurn) break
+    }
+    idle.target = idle.heading + wrapAngle(heading - idle.heading)
+    idle.turnAt = now + idleConfig.turnEverySec * 1000
+  }
+
+  /** 가만히 있을 때: 정해 둔 방향으로 아주 천천히 돈다. 입력이 들어오면 곧 떨어지고 각도는 그대로 남는다 */
+  const driftIdle = (dt: number, now: number, background: number) => {
+    const turning = Math.hypot(velocity.yaw, velocity.pitch) * cameraView.focal > config.minInertia
+    const still = now - Math.max(idle.inputAt, pointer.movedAt) > idleConfig.delayMs
+    const want = idle.allowed && !tween && !held && !turning && still && background > 0
+    if (want && idle.amount === 0) {
+      // 새로 시작: 지금 각도를 중심으로 삼고, 아무 쪽(위아래 · 사선 포함)으로나 출발한다
+      idle.anchorYaw = goal.yaw
+      idle.anchorPitch = goal.pitch
+      idle.heading = idle.target = Math.random() * TAU
+      idle.turnAt = now + idleConfig.turnEverySec * 1000
+    }
+    idle.amount += ((want ? 1 : 0) - idle.amount) * follow(dt, want ? idleConfig.easeInMs : idleConfig.easeOutMs)
+    if (!want && idle.amount < 0.001) idle.amount = 0
+    if (idle.amount === 0) return
+
+    // 1분마다 새 방향. 범위 밖으로 나가는 중이면 그 전에 안쪽으로 돌아선다
+    const offset = idleOffset()
+    const outward = Math.cos(idle.target) * offset.x + Math.sin(idle.target) * offset.y > 0
+    if (now >= idle.turnAt || (Math.hypot(offset.x, offset.y) > 1 && outward)) chooseHeading(now)
+    idle.heading += (idle.target - idle.heading) * follow(dt, idleConfig.turnMs)
+
+    const step = (degToRad(idleConfig.speedDegPerSec) / 1000) * dt * idle.amount * background
+    goal.yaw += Math.cos(idle.heading) * step
+    goal.pitch += Math.sin(idle.heading) * step * (pitchRange / yawRange)
+    clampGoal()
+  }
 
   const stop = () => {
     velocity.x = velocity.y = velocity.z = velocity.yaw = velocity.pitch = 0
@@ -114,6 +195,7 @@ export function createCameraRig(): CameraRig {
     },
 
     jumpTo(target) {
+      touch()
       tween = null
       stop()
       Object.assign(goal, target)
@@ -122,6 +204,7 @@ export function createCameraRig(): CameraRig {
     },
 
     flyTo(target, durationMs, ease = config.travelEase) {
+      touch()
       stop()
       const to = {
         ...target,
@@ -135,12 +218,14 @@ export function createCameraRig(): CameraRig {
     current: () => ({ ...(tween ? tween.to : goal) }),
 
     grab() {
+      touch()
       tween = null
       held = true
       stop()
     },
 
     orbitBy(dx, dy, elapsedMs) {
+      touch()
       const yaw = -degToRad(dx * orbitDegPerPx)
       const pitch = degToRad(dy * orbitDegPerPx)
       goal.yaw += yaw
@@ -152,6 +237,7 @@ export function createCameraRig(): CameraRig {
     },
 
     panBy(dx, dy, elapsedMs) {
+      touch()
       const sx = -dx / goal.zoom
       const sy = -dy / goal.zoom
       const before = { x: goal.x, y: goal.y, z: goal.z }
@@ -164,11 +250,13 @@ export function createCameraRig(): CameraRig {
     },
 
     release(carry) {
+      touch()
       held = false
       if (!carry) stop()
     },
 
     zoomBy(factor) {
+      touch()
       tween = null
       stop()
       goal.zoom = limits ? clamp(goal.zoom * factor, limits.zoomMin, limits.zoomMax) : goal.zoom * factor
@@ -176,6 +264,10 @@ export function createCameraRig(): CameraRig {
     },
 
     goalZoom: () => goal.zoom,
+
+    setIdleOrbit(allowed) {
+      idle.allowed = allowed
+    },
 
     update(dt, now) {
       if (tween) {
@@ -212,8 +304,10 @@ export function createCameraRig(): CameraRig {
         clampGoal()
       }
 
-      // 화면의 카메라는 목표를 약간 늦게 따라간다(무거울수록 더 늦게)
       const { parallax, background, weight } = getMotion()
+      driftIdle(dt, now, Math.min(background, 1))
+
+      // 화면의 카메라는 목표를 약간 늦게 따라간다(무거울수록 더 늦게)
       const k = follow(dt, config.followMs * weight)
       cameraView.x += (goal.x - cameraView.x) * k
       cameraView.y += (goal.y - cameraView.y) * k

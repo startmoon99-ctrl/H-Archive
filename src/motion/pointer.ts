@@ -9,6 +9,8 @@ export const pointer = {
   nx: 0,
   ny: 0,
   active: false,
+  /** 마지막으로 움직인 시각(performance.now). 가만히 있는지 판단할 때 쓴다 */
+  movedAt: 0,
 }
 
 window.addEventListener(
@@ -20,6 +22,7 @@ window.addEventListener(
     pointer.nx = (event.clientX / window.innerWidth) * 2 - 1
     pointer.ny = (event.clientY / window.innerHeight) * 2 - 1
     pointer.active = true
+    pointer.movedAt = performance.now()
   },
   { passive: true },
 )
