@@ -9,17 +9,29 @@ import type { ID } from '@/types/archive'
  */
 type Locate = (projectId: ID) => TravelOrigin | null
 
-let locate: Locate | null = null
+interface WorkLocator {
+  /** 장면이 마지막 프레임에 계산한 자리(DOM을 재지 않는다). 매 프레임 따라갈 때 쓴다 */
+  locate: Locate
+  /** 지금 보이는 그대로의 자리(Hover로 커진 것까지). 한 번만 재서 이어받을 때 쓴다 */
+  measure: Locate
+}
+
+let locator: WorkLocator | null = null
 
 /** 공간이 등록한다. 돌려주는 함수로 해제한다. */
-export function provideWorkLocation(next: Locate): () => void {
-  locate = next
+export function provideWorkLocation(next: WorkLocator): () => void {
+  locator = next
   return () => {
-    if (locate === next) locate = null
+    if (locator === next) locator = null
   }
 }
 
 /** 그 작품의 프레임이 지금 놓인 화면 자리. 공간에 보이지 않으면 null */
 export function locateWork(projectId: ID): TravelOrigin | null {
-  return locate?.(projectId) ?? null
+  return locator?.locate(projectId) ?? null
+}
+
+/** 그 작품의 프레임이 지금 보이는 그대로의 자리. 화면에 없으면 null */
+export function measureWork(projectId: ID): TravelOrigin | null {
+  return locator?.measure(projectId) ?? null
 }

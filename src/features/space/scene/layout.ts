@@ -90,7 +90,8 @@ function draftCluster(category: Category, projects: Project[], portrait: boolean
       hue: projectHue(project, category.hue),
       dx,
       dy,
-      dz: (seed - 0.5) * nodeConfig.depthRange,
+      // 깊이: 만든 순서로 고르게 흩어(황금비 간격) 작품이 몇 개든 앞뒤가 섞이게 하고, seed로 조금 흔든다. 새로고침해도 같다.
+      dz: (((index * 0.618034 + seed * 0.25) % 1) - 0.5) * nodeConfig.depthRange,
       width,
       height,
       index,

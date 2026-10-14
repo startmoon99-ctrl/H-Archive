@@ -29,7 +29,7 @@
   background: var(--color-surface);
   opacity: 0;
   /* 커서가 다가오는 만큼 조금씩 다가온다(값은 이미 부드럽게 따라오므로 transition을 걸지 않는다) */
-  transform: scale(calc(1 + var(--near) * 0.05));
+  transform: scale(calc(1 + var(--near) * var(--work-near-scale)));
   box-shadow:
     0 0 calc(var(--near) * 2.6rem) oklch(0.84 var(--chroma-tint) var(--hue) / calc(0.3 * var(--near) * var(--m-glow))),
     0 1.2rem 3rem rgb(var(--void-rgb) / 0.6);
@@ -72,20 +72,19 @@
   pointer-events: none;
 }
 
-/* 돌아와 제자리에 내려앉는다: 아주 조금 큰 데서 자리를 잡고, 밝아졌던 빛이 가라앉는다 */
+/* 돌아와 제자리에 내려앉는다: 밝아졌던 빛이 가라앉는다(크기는 그대로라 이어받는 순간 튀지 않는다) */
 .node[data-state='open'][data-landed='true'] {
   animation: node-settle var(--dur-slow) var(--ease-enter);
 }
 
 @keyframes node-settle {
   from {
-    scale: calc(1 + 0.03 * min(var(--m-intensity), 1));
     filter: brightness(1.25);
   }
 }
 
 .node[data-active='true'] .node__frame {
-  scale: 1.07;
+  scale: var(--work-active-scale);
 }
 
 /* 어둠에 잠겨 있다가 다가가면 밝아진다 + 가는 테두리 */

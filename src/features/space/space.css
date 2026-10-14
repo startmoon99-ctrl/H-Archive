@@ -48,6 +48,8 @@
 /* 상세 화면 뒤에는 입자만 옅게 비친다. 성단 · 작품은 물러나며 사라지고, 돌아오면 다시 떠오른다 */
 .space[data-view='project'] .space__layer {
   opacity: 0;
+  /* 카메라가 작품에 다가가는 동안은 그대로 두고, 이미지를 넘겨받을 때부터 물러난다 */
+  transition-delay: var(--handoff-delay);
 }
 
 /* 프로젝트 화면에 완전히 가려지면 그리지 않는다 */

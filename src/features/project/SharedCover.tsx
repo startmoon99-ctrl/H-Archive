@@ -4,7 +4,7 @@ import { useLatest } from '@/hooks/useLatest'
 import type { PresenceState } from '@/hooks/usePresence'
 import { getMotion, motionMs } from '@/motion/runtime'
 import { onTick } from '@/motion/ticker'
-import { locateWork } from '@/motion/travel'
+import { locateWork, measureWork } from '@/motion/travel'
 import { useUiStore, type TravelOrigin } from '@/store/uiStore'
 import type { ID } from '@/types/archive'
 import { clamp, lerp } from '@/utils/math'
@@ -87,6 +87,8 @@ export function SharedCover({ projectId, state, pageRef, origin, returning, onFl
   /** 사본이 지금 그려진 자리. 이동 중에만 있다 */
   const drawn = useRef<Box | null>(null)
   const stopTick = useRef<(() => void) | null>(null)
+  /** 카메라가 작품에 다가가는 동안 기다렸다가 이미지를 이어받는 타이머 */
+  const handoffTimer = useRef(0)
   const wasOpen = useRef(false)
   /** 한 번 닫혔다. 그 뒤에 열리면 처음 여는 것이 아니라 남아 있던 화면을 다시 여는 것이다 */
   const hasClosed = useRef(false)
@@ -122,6 +124,8 @@ export function SharedCover({ projectId, state, pageRef, origin, returning, onFl
 
     /** 사본을 걷는다(CSS가 짧게 사라지게 한다) */
     const settle = () => {
+      window.clearTimeout(handoffTimer.current)
+      handoffTimer.current = 0
       stopTick.current?.()
       stopTick.current = null
       flight.current = null
@@ -150,7 +154,8 @@ export function SharedCover({ projectId, state, pageRef, origin, returning, onFl
         to,
         lastTo: target,
         startedAt: null,
-        duration: motionMs(projectMotion.travel),
+        // 돌아갈 때는 카메라가 물러나는 시간과 같아, 이미지와 카메라가 함께 멈춘다
+        duration: motionMs(direction === 'out' ? projectMotion.approach : projectMotion.travel),
         radius: preview ? Number.parseFloat(getComputedStyle(preview).borderTopLeftRadius) || 0 : 0,
       }
       element.dataset.flying = 'true'
@@ -180,20 +185,36 @@ export function SharedCover({ projectId, state, pageRef, origin, returning, onFl
       return true
     }
 
-    return { heroBox, heroImage, setAway, settle, fly }
+    /**
+     * 열 때: 카메라가 작품으로 다가가는 동안(공간의 작품이 그대로 커진다) 기다렸다가,
+     * 다 와 갈 즈음 그 작품이 보이는 자리에서 이미지를 이어받아 대표 이미지 자리로 옮긴다.
+     * 이어받는 순간에만 공간의 프레임을 비우므로 두 이미지가 함께 보이지 않는다.
+     */
+    const handoff = (id: ID, fallback: Box, src: string) => {
+      window.clearTimeout(handoffTimer.current)
+      handoffTimer.current = window.setTimeout(
+        () => {
+          handoffTimer.current = 0
+          if (fly('in', measureWork(id) ?? fallback, heroBox, src)) setAway(id)
+          else latest.current.onFlying(false)
+        },
+        motionMs(projectMotion.approach) * projectMotion.handoffAt,
+      )
+    }
+
+    return { heroBox, heroImage, setAway, settle, fly, handoff }
   }).current
 
   // 열 때: 화면이 처음 그려지기 전에 사본을 누른 자리에 놓고, 공간의 프레임을 비운다
   useLayoutEffect(() => {
-    const { heroBox, setAway, settle, fly } = actions()
+    const { setAway, settle, handoff } = actions()
     const from = latest.current.origin
-    const flying =
-      initialState.current === 'closed' &&
-      from?.src !== undefined &&
-      getMotion().intensity > 0 &&
-      fly('in', from, heroBox, from.src)
-    if (flying) setAway(projectId)
-    else latest.current.onFlying(false)
+    // 대표 이미지는 사본이 도착할 때까지 감춰 둔다(처음부터 감춘 상태로 시작한다)
+    if (initialState.current === 'closed' && from?.src !== undefined && getMotion().intensity > 0) {
+      handoff(projectId, from, from.src)
+    } else {
+      latest.current.onFlying(false)
+    }
 
     return () => {
       settle()
@@ -202,7 +223,7 @@ export function SharedCover({ projectId, state, pageRef, origin, returning, onFl
   }, [actions, latest, projectId])
 
   useEffect(() => {
-    const { heroBox, heroImage, setAway, settle, fly } = actions()
+    const { heroBox, heroImage, setAway, settle, fly, handoff } = actions()
 
     if (state === 'open') {
       wasOpen.current = true
@@ -212,13 +233,16 @@ export function SharedCover({ projectId, state, pageRef, origin, returning, onFl
       // 닫힌 화면이 사라지기 전에 다시 열렸다(같은 화면을 이어 쓴다). 닫을 때 감춰 둔 대표 이미지가
       // 그대로 남지 않도록 여는 이동을 다시 한다: 돌아가던 사본이 있으면 그 자리에서, 없으면 새로 누른 자리에서.
       const returningCopy = flight.current?.direction === 'out' ? drawn.current : null
+      const returningSrc = imageRef.current?.getAttribute('src')
       const origin = latest.current.origin
-      const from = returningCopy ?? origin
-      const src = returningCopy ? imageRef.current?.getAttribute('src') : origin?.src
-      const flying = from !== null && Boolean(src) && getMotion().intensity > 0 && fly('in', from, heroBox, src!)
-      if (flying) {
+      const motion = getMotion().intensity > 0
+      if (motion && returningCopy && returningSrc && fly('in', returningCopy, heroBox, returningSrc)) {
         setAway(projectId)
         latest.current.onFlying(true)
+      } else if (motion && !returningCopy && origin?.src) {
+        settle()
+        latest.current.onFlying(true)
+        handoff(projectId, origin, origin.src)
       } else {
         settle()
         setAway(null)
@@ -229,6 +253,13 @@ export function SharedCover({ projectId, state, pageRef, origin, returning, onFl
     if (!wasOpen.current) return
     wasOpen.current = false
     hasClosed.current = true
+
+    // 아직 이어받기 전에 닫혔다: 이미지는 공간의 작품에 그대로 있으니 옮길 것이 없다
+    if (handoffTimer.current) {
+      settle()
+      setAway(null)
+      return
+    }
 
     // 닫을 때: 대표 이미지(또는 이동 중이던 사본)가 작품의 자리로 돌아간다
     const from = drawn.current ?? heroBox()

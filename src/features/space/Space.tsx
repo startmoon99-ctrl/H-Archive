@@ -98,6 +98,8 @@ export function Space() {
   const previousRef = useRef({ view: route.view, categoryId: route.categoryId, projectId: route.projectId })
   /** 방금 상세 화면에서 돌아온 작품. 주변 입자가 잠시 감싼다 */
   const returnedRef = useRef<ID | null>(null)
+  /** 작품을 누르기 직전의 카메라. 닫으면 이 자리로 되돌아온다 */
+  const departureRef = useRef<CameraGoal | null>(null)
   const [elements] = useState<SceneElements>(() => ({ clusters: new Map(), nodes: new Map() }))
   const [rig] = useState(createCameraRig)
   const [updater] = useState(() => createSceneUpdater(elements))
@@ -115,10 +117,14 @@ export function Space() {
       return { ...layout.overview, zoom: layout.overview.zoom * camera.introZoomFactor }
     }
     if (!focused) return layout.overview
-    // 작품을 열면 그 이미지는 상세 화면으로 건너가고, 카메라는 한발 물러나 공간을 뒤로 민다
-    if (route.view === 'project') return { ...focused.focus, zoom: focused.focus.zoom * camera.projectZoomFactor }
+    // 작품을 열면 카메라가 그 작품의 자리(x · y · z)로 다가간다. 주변은 깊이에 따라 저절로 시차가 생긴다.
+    if (route.view === 'project') {
+      const work = focused.nodes.find((node) => node.project.id === route.projectId)
+      const zoom = focused.focus.zoom * camera.projectZoomFactor
+      return work ? { x: work.x, y: work.y, z: work.z, zoom } : { ...focused.focus, zoom }
+    }
     return focused.focus
-  }, [introPhase, layout, focused, route.view])
+  }, [introPhase, layout, focused, route.view, route.projectId])
 
   useEffect(() => {
     rig.setViewport(viewport.width, viewport.height)
@@ -140,21 +146,25 @@ export function Space() {
     const before = previousRef.current
     const { route, introPhase, introRevealMs } = travelContext.current
     previousRef.current = { view: route.view, categoryId: route.categoryId, projectId: route.projectId }
-    // 같은 성단 안에서 작품을 열고 닫을 때는 이미지가 건너가는 시간에 맞춰 물러나고 돌아온다
+    // 같은 성단 안에서 작품을 열면 그 작품으로 다가가고, 닫으면 누르기 직전의 자리로 그대로 물러난다
     const sameCluster = before.categoryId === route.categoryId
     const opening = sameCluster && before.view === 'system' && route.view === 'project'
     const returning = sameCluster && before.view === 'project' && route.view === 'system'
-    const cruise = motionMs(opening || returning ? projectMotion.travel : 'travel')
+    const cruise = motionMs(opening || returning ? projectMotion.approach : 'travel')
     returnedRef.current = returning ? before.projectId : null
     if (returning) environmentRef.current?.wrap(cruise)
+    if (opening) departureRef.current = rig.current()
+    else if (!returning) departureRef.current = null
+    const target = (returning && departureRef.current) || { x: goalX, y: goalY, z: goalZ, zoom: goalZoom }
 
     const travelMs = introPhase === 'playing' ? 0 : introPhase === 'revealing' ? introRevealMs : cruise
     if (!placedRef.current || travelMs <= 0) {
-      rig.jumpTo({ x: goalX, y: goalY, z: goalZ, zoom: goalZoom })
+      rig.jumpTo(target)
       placedRef.current = true
     } else {
-      rig.flyTo({ x: goalX, y: goalY, z: goalZ, zoom: goalZoom }, travelMs)
+      rig.flyTo(target, travelMs, opening || returning ? projectMotion.approachEase : undefined)
     }
+    if (returning) departureRef.current = null
     // 좌표가 바뀔 때만 이동한다. 단계/시간만 바뀌어 진행 중인 이동이 재시작되지 않게 최신 ref로 읽는다.
   }, [rig, goalX, goalY, goalZ, goalZoom, travelContext])
 
@@ -259,8 +269,20 @@ export function Space() {
     })
   }, [covered, rig, updater, latest])
 
-  // 상세 화면이 닫힐 때 이미지가 돌아갈 자리를 알려 준다
-  useEffect(() => provideWorkLocation(updater.rectOf), [updater])
+  // 상세 화면이 작품의 이미지를 이어받고 돌려보낼 자리를 알려 준다
+  useEffect(
+    () =>
+      provideWorkLocation({
+        locate: updater.rectOf,
+        measure: (id) => {
+          const frame = elements.nodes.get(id)?.querySelector('.node__frame')
+          if (!frame) return null
+          const rect = frame.getBoundingClientRect()
+          return { x: rect.left, y: rect.top, width: rect.width, height: rect.height }
+        },
+      }),
+    [updater, elements],
+  )
 
   // 다른 성단으로 옮기면 선택을 푼다
   useEffect(() => setActive(null), [focusedId])
@@ -344,11 +366,16 @@ export function Space() {
         data-covered={covered}
         data-receiving={receiving}
         data-intro={introPhase}
+        style={cssVars({ 'handoff-delay': `${Math.round(motionMs(projectMotion.approach) * projectMotion.handoffAt)}ms` })}
       >
         <canvas ref={canvasRef} className="space__canvas" aria-hidden="true" />
         <div
           className="space__layer"
-          style={cssVars({ 'caption-width': `${interaction.captionWidthPx * viewport.scale}px` })}
+          style={cssVars({
+            'caption-width': `${interaction.captionWidthPx * viewport.scale}px`,
+            'work-active-scale': spaceConfig.effects.workActiveScale,
+            'work-near-scale': spaceConfig.effects.workNearScale,
+          })}
         >
           {layout.clusters.map((cluster) => (
             <ClusterNode

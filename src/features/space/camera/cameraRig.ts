@@ -22,8 +22,10 @@ export interface CameraRig {
   setLimits(limits: CameraLimits): void
   /** 연출 없이 바로 옮긴다 */
   jumpTo(goal: CameraGoal): void
-  /** 목표 지점으로 가감속하며 이동한다 */
-  flyTo(goal: CameraGoal, durationMs: number): void
+  /** 목표 지점으로 가감속하며 이동한다. ease를 주지 않으면 config의 travelEase를 쓴다 */
+  flyTo(goal: CameraGoal, durationMs: number, ease?: (t: number) => number): void
+  /** 지금 향하고 있는 목표(이동 중이면 그 도착점). 나중에 그 자리로 되돌아올 때 쓴다 */
+  current(): CameraGoal
   /** 사용자가 공간을 잡았다: 진행 중이던 이동과 관성을 멈춘다 */
   grab(): void
   /** 화면 px만큼 끌어 옮긴다. elapsedMs는 지난 입력으로부터의 시간(관성 계산용) */
@@ -42,6 +44,7 @@ interface Tween {
   to: CameraGoal
   start: number
   duration: number
+  ease: (t: number) => number
 }
 
 /** 프레임 길이에 상관없이 같은 빠르기로 목표에 다가가는 비율 */
@@ -86,10 +89,12 @@ export function createCameraRig(): CameraRig {
       Object.assign(cameraView, target)
     },
 
-    flyTo(target, durationMs) {
+    flyTo(target, durationMs, ease = config.travelEase) {
       velocity.x = velocity.y = 0
-      tween = { from: { ...goal }, to: { ...target }, start: performance.now(), duration: Math.max(durationMs, 1) }
+      tween = { from: { ...goal }, to: { ...target }, start: performance.now(), duration: Math.max(durationMs, 1), ease }
     },
+
+    current: () => ({ ...(tween ? tween.to : goal) }),
 
     grab() {
       tween = null
@@ -131,7 +136,7 @@ export function createCameraRig(): CameraRig {
     update(dt, now) {
       if (tween) {
         const t = clamp((now - tween.start) / tween.duration, 0, 1)
-        const eased = config.travelEase(t)
+        const eased = tween.ease(t)
         const { from, to } = tween
         goal.zoom = from.zoom * (to.zoom / from.zoom) ** eased
         // 도착 지점이 화면 위에서 일정하게 중심으로 다가오도록 위치를 정한다

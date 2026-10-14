@@ -1,9 +1,12 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useArchiveNav, useArchiveRoute } from '@/app/useArchiveRoute'
 import { Button } from '@/components/Button'
+import { projectMotion } from '@/config/motion'
 import { useLastDefined, usePresence, type PresenceState } from '@/hooks/usePresence'
 import { useViewport } from '@/hooks/useViewport'
-import { getMotion } from '@/motion/runtime'
+import { getMotion, motionMs } from '@/motion/runtime'
+import { onTick } from '@/motion/ticker'
+import { locateWork } from '@/motion/travel'
 import { useArchiveStore } from '@/store/archiveStore'
 import { useUiStore } from '@/store/uiStore'
 import type { ID } from '@/types/archive'
@@ -30,6 +33,32 @@ function ProjectDetail({ projectId, state }: ProjectDetailProps) {
   const ready = useArchiveStore((s) => s.status === 'ready')
   const project = useArchiveStore((s) => s.projects.find((item) => item.id === projectId))
   const category = useArchiveStore((s) => s.categories.find((item) => item.id === project?.categoryId))
+  const handoffDelay = Math.round(motionMs(projectMotion.approach) * projectMotion.handoffAt)
+  // 이미지 없는 작품: 카메라가 다가가는 동안은 닫아 두었다가, 다 와 갈 즈음 그 작품이 보이는 자리에서 창이 열린다
+  const [openedFromWork] = useState(
+    () => state === 'closed' && origin !== null && !origin.src && getMotion().intensity > 0,
+  )
+  const [handoff, setHandoff] = useState<'waiting' | 'done'>(openedFromWork ? 'waiting' : 'done')
+  useEffect(() => {
+    const page = pageRef.current
+    if (handoff !== 'waiting' || !page) return
+    // 기다리는 동안 창의 시작 자리(--from-*)가 다가오는 작품을 따라간다(장면이 계산한 자리라 DOM을 재지 않는다).
+    // 그래서 여는 순간 이미 작품이 보이는 그 자리에 있다.
+    const stop = onTick(() => {
+      const rect = locateWork(projectId)
+      if (!rect) return
+      page.style.setProperty('--from-top', `${rect.y}px`)
+      page.style.setProperty('--from-left', `${rect.x}px`)
+      page.style.setProperty('--from-right', `${window.innerWidth - rect.x - rect.width}px`)
+      page.style.setProperty('--from-bottom', `${window.innerHeight - rect.y - rect.height}px`)
+    })
+    const timer = window.setTimeout(() => setHandoff('done'), handoffDelay)
+    return () => {
+      stop()
+      window.clearTimeout(timer)
+    }
+  }, [handoff, handoffDelay, projectId])
+
   const from = origin ?? {
     x: viewport.width * (0.5 - CENTER_OPENING / 2),
     y: viewport.height * (0.5 - CENTER_OPENING / 2),
@@ -50,11 +79,15 @@ function ProjectDetail({ projectId, state }: ProjectDetailProps) {
         ref={pageRef}
         className="project"
         data-state={state}
-        data-travel={openedShared || (returning && getMotion().intensity > 0) ? 'shared' : 'frame'}
+        data-travel={
+          openedShared || (returning && getMotion().intensity > 0) ? 'shared' : openedFromWork ? 'work' : 'frame'
+        }
+        data-handoff={handoff}
         data-cover={coverAway ? 'away' : 'here'}
         style={cssVars({
           hue: category?.hue,
           // frame 방식: 눌렀던 프레임의 자리에서 화면이 커지며 열린다. 검색이나 주소로 바로 왔다면 화면 가운데에서 연다.
+          'handoff-delay': `${handoffDelay}ms`,
           'from-top': `${from.y}px`,
           'from-left': `${from.x}px`,
           'from-right': `${viewport.width - from.x - from.width}px`,

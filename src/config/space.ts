@@ -23,7 +23,7 @@ export const spaceConfig = {
       /** 화면 비율에 맞춰 한 축을 누르는 비율 */
       squash: 0.66,
       /** 성단마다 달라지는 깊이의 폭. 클수록 성단 사이의 원근감이 커진다 */
-      depthRange: 300,
+      depthRange: 560,
     },
     node: {
       /** 작품 사이의 간격 */
@@ -32,7 +32,7 @@ export const spaceConfig = {
       startIndex: 1.9,
       squash: 0.8,
       /** 작품마다 달라지는 깊이의 폭 */
-      depthRange: 34,
+      depthRange: 120,
       /** 프레임의 크기(world). 기록이 많을수록 조금 커진다 */
       width: 38,
       height: 25,
@@ -62,10 +62,10 @@ export const spaceConfig = {
     focusFill: 0.84,
     focusZoom: { min: 1, max: 5.2 },
     /**
-     * 작품을 열 때 성단 zoom에 곱하는 배율. 1보다 작으면 카메라가 한발 물러난다:
-     * 작품의 이미지는 상세 화면으로 건너가고(features/project/SharedCover) 공간은 뒤로 밀린다.
+     * 작품을 열 때 성단 zoom에 곱하는 배율. 카메라가 그 작품(x · y · z)으로 다가가며 작품이 이만큼 커진다.
+     * 다가간 뒤 이미지가 상세 화면의 대표 이미지 자리로 넘어간다(features/project/SharedCover).
      */
-    projectZoomFactor: 0.8,
+    projectZoomFactor: 3.2,
     /** 인트로가 끝나기 전 멀리서 바라보는 배율 */
     introZoomFactor: 0.22,
     /** 전체 보기에서 이 배율 이상 확대하면 가까운 성단으로 들어간다 */
@@ -157,6 +157,12 @@ export const spaceConfig = {
   effects: {
     grainOpacity: 0.06,
     vignetteOpacity: 0.72,
+    /**
+     * 작품 프레임이 커지는 정도: 선택(Hover · Rail)됐을 때의 배율과, 커서가 가까울수록 더해지는 비율.
+     * effects/node-effects.css가 그리고, 상세 화면에서 돌아오는 이미지도 같은 크기에 내려앉는다.
+     */
+    workActiveScale: 1.07,
+    workNearScale: 0.05,
   },
 
   /**

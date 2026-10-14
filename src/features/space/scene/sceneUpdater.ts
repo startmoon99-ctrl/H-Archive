@@ -83,6 +83,8 @@ export function createSceneUpdater(elements: SceneElements): SceneUpdater {
   const written = new WeakMap<HTMLElement, Written>()
   /** 작품의 프레임 크기(world). rectOf가 쓴다 */
   const frames = new Map<ID, PlacedNode>()
+  /** 마지막 프레임에 선택돼 있던 작품. rectOf가 그 작품의 커진 크기를 계산할 때 쓴다 */
+  let lastActiveId: ID | null = null
   const projected: Projected = { x: 0, y: 0, scale: 1, depth: 1 }
   let lines = new Float32Array(64 * LINE_STRIDE)
   /** 선이 서서히 나타나고 사라지는 정도 */
@@ -277,12 +279,16 @@ export function createSceneUpdater(elements: SceneElements): SceneUpdater {
       const node = frames.get(projectId)
       const state = element && written.get(element)
       if (!node || !state || !state.visible || Number.isNaN(state.x)) return null
-      const width = node.width * state.scale
-      const height = node.height * state.scale
+      // 보이는 그대로의 크기: 선택됐거나 커서가 가까우면 effects가 키운 만큼 더한다(DOM을 재지 않는다)
+      const { workActiveScale, workNearScale } = spaceConfig.effects
+      const grown = (projectId === lastActiveId ? workActiveScale : 1) * (1 + state.near * workNearScale)
+      const width = node.width * state.scale * grown
+      const height = node.height * state.scale * grown
       return { x: state.x - width / 2, y: state.y - height / 2, width, height }
     },
 
     update(frame, dt, now) {
+      lastActiveId = frame.activeNodeId
       const focusedCluster = frame.layout.clusters.find((cluster) => cluster.category.id === frame.focusedId) ?? null
       if (focusedCluster) threadCluster = focusedCluster
       threadAmount += ((focusedCluster ? 1 : 0) - threadAmount) * follow(dt, interaction.proximityFollowMs * 2)

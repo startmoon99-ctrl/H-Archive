@@ -160,12 +160,19 @@ export const motionControls: MotionControl[] = [
   { key: 'mouseFollow', label: 'Mouse Follow', hint: '커서를 따라오는 빛과 버튼 반응', ...AMOUNT },
 ]
 
+function easeOutQuart(t: number): number {
+  return 1 - (1 - t) ** 4
+}
+
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2
 }
 
 export const projectMotion: {
   heroParallax: number
+  approach: DurationToken
+  approachEase: (t: number) => number
+  handoffAt: number
   travel: DurationToken
   travelEase: (t: number) => number
   returnArc: { ratio: number; maxViewport: number }
@@ -173,7 +180,16 @@ export const projectMotion: {
   /** 상세 화면을 스크롤할 때 대표 이미지가 따라 움직이는 비율 */
   heroParallax: 0.18,
   /** 작품의 이미지가 공간과 상세 화면 사이를 건너가는 시간과 가감속. 카메라가 물러나고 돌아오는 시간도 같다. */
-  travel: 'slow',
+  /**
+   * 작품을 누르면 카메라가 그 작품으로 다가가는 시간과 가감속(바로 출발해 목표 근처에서 길게 감속한다).
+   * 돌아올 때도 같은 시간 · 곡선으로 원래 자리로 물러난다.
+   */
+  approach: 'slow',
+  approachEase: easeOutQuart,
+  /** 다가가는 시간 중 이 비율이 지나면 작품의 이미지가 상세 화면의 대표 이미지 자리로 넘어가고 화면이 나타난다 */
+  handoffAt: 0.7,
+  /** 이미지가 공간과 상세 화면 사이를 건너가는 시간과 가감속 */
+  travel: 'base',
   travelEase: easeInOutCubic,
   /**
    * 돌아갈 때 그리는 호: 곧게 줄어드는 대신 위로 살짝 떴다가 제자리에 내려앉는다.
