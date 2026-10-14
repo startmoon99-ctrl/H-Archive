@@ -5,15 +5,19 @@
 
 const PROJECTION = /* glsl */ `
 uniform vec3 uCamera;   // 카메라 위치(world)
+uniform vec3 uRight;    // 카메라의 오른쪽 · 아래 · 뒤 방향(world)
+uniform vec3 uDown;
+uniform vec3 uBack;
 uniform float uFocal;   // 초점 거리(px)
 uniform vec2 uHalf;     // 화면 크기의 절반(px)
 uniform float uNear;
 
-// world → 화면 중심 기준 px. 카메라 뒤면 depth가 uNear보다 작다.
+// world → 화면 중심 기준 px. 카메라 뒤면 depth가 uNear보다 작다. camera/cameraView.ts의 project()와 같은 식이다.
 vec2 toScreen(vec3 p, out float depth, out float scale) {
-  depth = uCamera.z - p.z;
+  vec3 v = p - uCamera;
+  depth = -dot(v, uBack);
   scale = uFocal / max(depth, 0.0001);
-  return (p.xy - uCamera.xy) * scale;
+  return vec2(dot(v, uRight), dot(v, uDown)) * scale;
 }
 
 vec4 toClip(vec2 screen) {

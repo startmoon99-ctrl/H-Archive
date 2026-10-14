@@ -6,7 +6,11 @@ const FLOAT_BYTES = 4
 export const LINE_STRIDE = 4
 
 export interface FrameUniforms {
+  /** 카메라 위치와 오른쪽 · 아래 · 뒤 방향(world) */
   camera: [number, number, number]
+  right: [number, number, number]
+  down: [number, number, number]
+  back: [number, number, number]
   focal: number
   near: number
   focusDistance: number
@@ -121,6 +125,9 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer | null {
 
   const setProjection = (uniform: ReturnType<typeof uniformLookup>, frame: FrameUniforms) => {
     gl.uniform3fv(uniform('uCamera'), frame.camera)
+    gl.uniform3fv(uniform('uRight'), frame.right)
+    gl.uniform3fv(uniform('uDown'), frame.down)
+    gl.uniform3fv(uniform('uBack'), frame.back)
     gl.uniform1f(uniform('uFocal'), frame.focal)
     gl.uniform2f(uniform('uHalf'), size.width / 2, size.height / 2)
     gl.uniform1f(uniform('uNear'), frame.near)

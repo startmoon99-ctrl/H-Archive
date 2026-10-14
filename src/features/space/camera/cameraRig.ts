@@ -2,10 +2,13 @@ import { spaceConfig } from '@/config/space'
 import { pointer } from '@/motion/pointer'
 import { getMotion } from '@/motion/runtime'
 import type { Point } from '@/types/ui'
-import { clamp } from '@/utils/math'
-import { cameraView, type Bounds, type CameraGoal } from './cameraView'
+import { clamp, degToRad } from '@/utils/math'
+import { cameraView, orient, type Bounds, type CameraGoal } from './cameraView'
 
 const config = spaceConfig.camera
+const { orbitDegPerPx, orbitPitchLimitDeg } = spaceConfig.interaction
+const PITCH_LIMIT = degToRad(orbitPitchLimitDeg)
+const TAU = Math.PI * 2
 
 export interface CameraLimits {
   zoomMin: number
@@ -22,13 +25,18 @@ export interface CameraRig {
   setLimits(limits: CameraLimits): void
   /** 연출 없이 바로 옮긴다 */
   jumpTo(goal: CameraGoal): void
-  /** 목표 지점으로 가감속하며 이동한다. ease를 주지 않으면 config의 travelEase를 쓴다 */
+  /**
+   * 목표 지점으로 가감속하며 이동한다. ease를 주지 않으면 config의 travelEase를 쓴다.
+   * goal에 yaw · pitch가 있으면 그 방향으로 함께 돌아가고(가까운 쪽으로), 없으면 지금 방향을 유지한다.
+   */
   flyTo(goal: CameraGoal, durationMs: number, ease?: (t: number) => number): void
-  /** 지금 향하고 있는 목표(이동 중이면 그 도착점). 나중에 그 자리로 되돌아올 때 쓴다 */
-  current(): CameraGoal
+  /** 지금 향하고 있는 목표(이동 중이면 그 도착점, 방향 포함). 나중에 그 자리로 되돌아올 때 쓴다 */
+  current(): Required<CameraGoal>
   /** 사용자가 공간을 잡았다: 진행 중이던 이동과 관성을 멈춘다 */
   grab(): void
-  /** 화면 px만큼 끌어 옮긴다. elapsedMs는 지난 입력으로부터의 시간(관성 계산용) */
+  /** 초점을 중심으로 돈다(화면 px만큼 끈 양). elapsedMs는 지난 입력으로부터의 시간(관성 계산용) */
+  orbitBy(dx: number, dy: number, elapsedMs: number): void
+  /** 화면 px만큼 끌어 옮긴다(지금 방향 기준). elapsedMs는 지난 입력으로부터의 시간(관성 계산용) */
   panBy(dx: number, dy: number, elapsedMs: number): void
   /** 놓았다. carry가 false면 관성 없이 멈춘다 */
   release(carry: boolean): void
@@ -40,8 +48,8 @@ export interface CameraRig {
 }
 
 interface Tween {
-  from: CameraGoal
-  to: CameraGoal
+  from: Required<CameraGoal>
+  to: Required<CameraGoal>
   start: number
   duration: number
   ease: (t: number) => number
@@ -52,18 +60,30 @@ function follow(dt: number, timeMs: number): number {
   return 1 - Math.exp(-dt / timeMs)
 }
 
+/** -π ~ π로 접는다(가까운 쪽으로 돌기 위해) */
+function wrapAngle(angle: number): number {
+  return angle - TAU * Math.round(angle / TAU)
+}
+
 /**
  * 감쇠 카메라. 입력과 이동은 목표(goal)만 바꾸고, 화면의 카메라는 그 목표를
  * 약간의 지연을 두고 따라간다. 그래서 어떤 입력도 화면에 딱딱하게 꽂히지 않는다.
+ * 끌기는 초점(공전의 중심)을 축으로 카메라가 실제로 도는 Orbit이고, 초점까지의 거리는 그대로다.
  */
 export function createCameraRig(): CameraRig {
-  const goal: CameraGoal = { x: 0, y: 0, z: 0, zoom: 1 }
-  const velocity: Point = { x: 0, y: 0 }
+  const goal: Required<CameraGoal> = { x: 0, y: 0, z: 0, zoom: 1, yaw: 0, pitch: 0 }
+  /** 끌기를 놓은 뒤 이어지는 이동(world/ms)과 회전(rad/ms) */
+  const velocity = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }
   let limits: CameraLimits | null = null
   let tween: Tween | null = null
   let held = false
 
+  const stop = () => {
+    velocity.x = velocity.y = velocity.z = velocity.yaw = velocity.pitch = 0
+  }
+
   const clampGoal = () => {
+    goal.pitch = clamp(goal.pitch, -PITCH_LIMIT, PITCH_LIMIT)
     if (!limits) return
     const pad = config.boundsPadding
     goal.zoom = clamp(goal.zoom, limits.zoomMin, limits.zoomMax)
@@ -71,11 +91,20 @@ export function createCameraRig(): CameraRig {
     goal.y = clamp(goal.y, limits.bounds.minY - pad, limits.bounds.maxY + pad)
   }
 
+  /** 화면의 오른쪽 · 아래로 sx · sy(world)만큼 초점을 옮긴다(지금 방향 기준) */
+  const shiftFocus = (sx: number, sy: number) => {
+    const { right: r, down: d } = cameraView
+    goal.x += r[0] * sx + d[0] * sy
+    goal.y += r[1] * sx + d[1] * sy
+    goal.z += r[2] * sx + d[2] * sy
+  }
+
   return {
     setViewport(width, height) {
       cameraView.width = width
       cameraView.height = height
       cameraView.focal = config.focalRatio * ((width + height) / 2)
+      orient()
     },
 
     setLimits(next) {
@@ -84,14 +113,21 @@ export function createCameraRig(): CameraRig {
 
     jumpTo(target) {
       tween = null
-      velocity.x = velocity.y = 0
+      stop()
       Object.assign(goal, target)
       Object.assign(cameraView, target)
+      orient()
     },
 
     flyTo(target, durationMs, ease = config.travelEase) {
-      velocity.x = velocity.y = 0
-      tween = { from: { ...goal }, to: { ...target }, start: performance.now(), duration: Math.max(durationMs, 1), ease }
+      stop()
+      const to = {
+        ...target,
+        // 방향을 줬으면 가까운 쪽으로 돌아 그 방향에 닿는다
+        yaw: target.yaw === undefined ? goal.yaw : goal.yaw + wrapAngle(target.yaw - goal.yaw),
+        pitch: target.pitch ?? goal.pitch,
+      }
+      tween = { from: { ...goal }, to, start: performance.now(), duration: Math.max(durationMs, 1), ease }
     },
 
     current: () => ({ ...(tween ? tween.to : goal) }),
@@ -99,35 +135,46 @@ export function createCameraRig(): CameraRig {
     grab() {
       tween = null
       held = true
-      velocity.x = velocity.y = 0
+      stop()
+    },
+
+    orbitBy(dx, dy, elapsedMs) {
+      const yaw = -degToRad(dx * orbitDegPerPx)
+      const pitch = degToRad(dy * orbitDegPerPx)
+      goal.yaw += yaw
+      goal.pitch += pitch
+      clampGoal()
+      const elapsed = Math.max(elapsedMs, 1)
+      velocity.yaw = yaw / elapsed
+      velocity.pitch = pitch / elapsed
     },
 
     panBy(dx, dy, elapsedMs) {
-      const worldX = -dx / goal.zoom
-      const worldY = -dy / goal.zoom
-      goal.x += worldX
-      goal.y += worldY
+      const sx = -dx / goal.zoom
+      const sy = -dy / goal.zoom
+      const before = { x: goal.x, y: goal.y, z: goal.z }
+      shiftFocus(sx, sy)
       clampGoal()
       const elapsed = Math.max(elapsedMs, 1)
-      velocity.x = worldX / elapsed
-      velocity.y = worldY / elapsed
+      velocity.x = (goal.x - before.x) / elapsed
+      velocity.y = (goal.y - before.y) / elapsed
+      velocity.z = (goal.z - before.z) / elapsed
     },
 
     release(carry) {
       held = false
-      if (!carry) velocity.x = velocity.y = 0
+      if (!carry) stop()
     },
 
     zoomAt(screen, factor) {
       tween = null
-      velocity.x = velocity.y = 0
+      stop()
       const offsetX = screen.x - cameraView.width / 2
       const offsetY = screen.y - cameraView.height / 2
       const before = goal.zoom
       goal.zoom = limits ? clamp(before * factor, limits.zoomMin, limits.zoomMax) : before * factor
       // 커서 아래의 지점이 그대로 커서 아래에 남도록 초점을 옮긴다
-      goal.x += offsetX / before - offsetX / goal.zoom
-      goal.y += offsetY / before - offsetY / goal.zoom
+      shiftFocus(offsetX / before - offsetX / goal.zoom, offsetY / before - offsetY / goal.zoom)
       clampGoal()
     },
 
@@ -144,13 +191,26 @@ export function createCameraRig(): CameraRig {
         goal.x = to.x - (to.x - from.x) * remaining
         goal.y = to.y - (to.y - from.y) * remaining
         goal.z = to.z - (to.z - from.z) * (1 - eased)
+        goal.yaw = from.yaw + (to.yaw - from.yaw) * eased
+        goal.pitch = from.pitch + (to.pitch - from.pitch) * eased
         if (t >= 1) tween = null
-      } else if (!held && Math.hypot(velocity.x, velocity.y) * goal.zoom > config.minInertia) {
-        goal.x += velocity.x * dt
-        goal.y += velocity.y * dt
+      } else if (!held) {
         const friction = config.inertiaFriction ** (dt / 16)
-        velocity.x *= friction
-        velocity.y *= friction
+        if (Math.hypot(velocity.x, velocity.y, velocity.z) * goal.zoom > config.minInertia) {
+          goal.x += velocity.x * dt
+          goal.y += velocity.y * dt
+          goal.z += velocity.z * dt
+          velocity.x *= friction
+          velocity.y *= friction
+          velocity.z *= friction
+        }
+        // 회전 관성: 화면에서 움직이는 정도(초점까지의 거리 기준 px)로 멈출지 정한다
+        if (Math.hypot(velocity.yaw, velocity.pitch) * cameraView.focal > config.minInertia) {
+          goal.yaw += velocity.yaw * dt
+          goal.pitch += velocity.pitch * dt
+          velocity.yaw *= friction
+          velocity.pitch *= friction
+        }
         clampGoal()
       }
 
@@ -160,6 +220,8 @@ export function createCameraRig(): CameraRig {
       cameraView.y += (goal.y - cameraView.y) * k
       cameraView.z += (goal.z - cameraView.z) * k
       cameraView.zoom *= (goal.zoom / cameraView.zoom) ** k
+      cameraView.yaw += (goal.yaw - cameraView.yaw) * k
+      cameraView.pitch += (goal.pitch - cameraView.pitch) * k
 
       // 마우스 시차 + 아주 느린 표류: 카메라가 옆으로 밀리면 가까운 것이 더 크게 움직인다
       const { parallax, background } = getMotion()
@@ -173,6 +235,7 @@ export function createCameraRig(): CameraRig {
       const p = follow(dt, config.parallaxFollowMs)
       cameraView.offsetX += (shiftX / cameraView.zoom - cameraView.offsetX) * p
       cameraView.offsetY += (shiftY / cameraView.zoom - cameraView.offsetY) * p
+      orient()
     },
   }
 }

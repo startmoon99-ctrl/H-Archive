@@ -58,10 +58,15 @@ export function buildParticleField(layout: SpaceLayout, density: number, scale: 
   const particles: Particle[] = []
 
   for (let index = 0; index < config.far.count * density; index++) {
+    // 구 위에 고르게: 높이(cos)를 고르게 뽑고 둘레 각을 고르게 뽑는다
+    const height = random() * 2 - 1
+    const around = random() * Math.PI * 2
+    const ring = Math.sqrt(1 - height * height)
+    const distance = between(random, config.far.radius)
     particles.push({
-      x: centerX + (random() - 0.5) * 2 * config.far.spread,
-      y: centerY + (random() - 0.5) * 2 * config.far.spread,
-      z: between(random, config.far.depth),
+      x: centerX + Math.cos(around) * ring * distance,
+      y: centerY + Math.sin(around) * ring * distance,
+      z: height * distance,
       size: between(random, config.far.size) * scale,
       color: starColor,
       alpha: between(random, config.far.alpha),

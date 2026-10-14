@@ -36,7 +36,8 @@ export function createDrag(rig: CameraRig) {
         return true
       }
       const now = performance.now()
-      rig.panBy(dx, dy, now - lastMoveAt)
+      // 끌기는 공간의 중심(카메라의 초점)을 축으로 한 공전이다. 평행 이동(rig.panBy)은 남겨 두었다
+      rig.orbitBy(dx, dy, now - lastMoveAt)
       lastMoveAt = now
       return true
     },

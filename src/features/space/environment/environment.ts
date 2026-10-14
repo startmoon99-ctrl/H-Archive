@@ -102,11 +102,10 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
           : 0
       renderer.draw(
         {
-          camera: [
-            cameraView.x + cameraView.offsetX,
-            cameraView.y + cameraView.offsetY,
-            cameraView.z + focusDistance(),
-          ],
+          camera: cameraView.position,
+          right: cameraView.right,
+          down: cameraView.down,
+          back: cameraView.back,
           focal: cameraView.focal,
           near: spaceConfig.camera.near,
           focusDistance: focusDistance(),

@@ -155,7 +155,14 @@ export function Space() {
     if (returning) environmentRef.current?.wrap(cruise)
     if (opening) departureRef.current = rig.current()
     else if (!returning) departureRef.current = null
-    const target = (returning && departureRef.current) || { x: goalX, y: goalY, z: goalZ, zoom: goalZoom }
+    // 작품으로 다가갈 때는 지금 돌아 본 방향 그대로, 그 밖의 이동(성단 · 전체 보기)은 정면으로 돌아오며 간다
+    const target = (returning && departureRef.current) || {
+      x: goalX,
+      y: goalY,
+      z: goalZ,
+      zoom: goalZoom,
+      ...(opening ? {} : { yaw: 0, pitch: 0 }),
+    }
 
     const travelMs = introPhase === 'playing' ? 0 : introPhase === 'revealing' ? introRevealMs : cruise
     if (!placedRef.current || travelMs <= 0) {
