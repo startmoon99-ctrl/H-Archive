@@ -22,6 +22,8 @@ export interface ArchiveRepository {
   saveCategory(category: Category): Promise<void>
   deleteCategory(id: ID): Promise<void>
   saveProject(project: Project): Promise<void>
+  /** 지원하는 저장소에서는 최신 값을 읽고 변경하는 과정을 하나의 트랜잭션으로 실행한다. */
+  mutateProject?(id: ID, change: (current: Project | undefined) => Project | undefined): Promise<Project | undefined>
   deleteProject(id: ID): Promise<void>
   clear(): Promise<void>
 }
@@ -47,7 +49,11 @@ export interface MediaStorage {
   getBlob(key: string): Promise<Blob | undefined>
   /** 화면에 바로 쓸 수 있는 주소 */
   getUrl(key: string): Promise<string | undefined>
+  /** 로컬 object URL의 사용이 끝났을 때 해제한다. 서명 URL 구현체에는 필요 없다. */
+  releaseUrl?(key: string, url: string): void
   remove(keys: string[]): Promise<void>
   clear(): Promise<void>
   estimate(): Promise<StorageEstimate | null>
+  /** 메타데이터에서 제거된 파일의 정리를 재시도한다. */
+  retryCleanup?(): Promise<void>
 }

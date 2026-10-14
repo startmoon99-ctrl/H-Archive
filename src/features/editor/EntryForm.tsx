@@ -19,7 +19,7 @@ interface EntryFormProps {
   projectId: ID
   /** 있으면 편집, 없으면 새 기록 */
   entryId?: ID
-  onClose: () => void
+  onClose: () => boolean
 }
 
 /** 개발 기록 추가 · 편집: 그날 무엇을 만들었고 무슨 생각을 했는지 */
@@ -38,6 +38,7 @@ export function EntryForm({ projectId, entryId, onClose }: EntryFormProps) {
   const [links, setLinks] = useState(entry?.links ?? [])
   const [media, setMedia] = useState(entry?.media ?? [])
   const [coverId, setCoverId] = useState(project?.coverMediaId ?? null)
+  const [initialCoverId] = useState(coverId)
 
   const save = () =>
     submit('저장 중', async (progress) => {
@@ -54,13 +55,14 @@ export function EntryForm({ projectId, entryId, onClose }: EntryFormProps) {
           tech,
           links: cleanLinks(links),
           media,
+          ...(coverId !== initialCoverId ? { coverMediaId: coverId } : {}),
         },
         files,
         (step) => progress(`${step.label} (${step.current}/${step.total})`),
       )
-      for (const warning of result.warnings) useUiStore.getState().notify(warning, 'warning')
-      if (coverId !== result.project.coverMediaId) await store.updateProject(projectId, { coverMediaId: coverId })
-      onClose()
+      if (onClose()) {
+        for (const warning of result.warnings) useUiStore.getState().notify(warning, 'warning')
+      }
     })
 
   const remove = () =>

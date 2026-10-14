@@ -12,6 +12,12 @@ export function allMedia(project: Project): MediaAsset[] {
   return project.timeline.flatMap((entry) => entry.media)
 }
 
+export function storedMediaKeys(assets: MediaAsset[]): string[] {
+  return [...new Set(assets
+    .flatMap((asset) => [asset.original, asset.thumbnail, asset.display, asset.preview])
+    .flatMap((source) => source?.type === 'stored' ? [source.key] : []))]
+}
+
 export function isVisual(asset: MediaAsset): boolean {
   return MEDIA_KINDS[asset.kind].visual
 }

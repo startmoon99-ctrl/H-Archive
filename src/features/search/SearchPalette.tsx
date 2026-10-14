@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { Orbit, Plus, Search, SlidersHorizontal, type LucideIcon } from 'lucide-react'
-import { useAddAction } from '@/app/useAddAction'
+import { Search } from 'lucide-react'
 import { useArchiveNav } from '@/app/useArchiveRoute'
 import { LIMITS } from '@/config/app'
 import { useArchiveStore } from '@/store/archiveStore'
-import { useUiStore } from '@/store/uiStore'
 import { cssVars } from '@/utils/css'
 import { formatDate } from '@/utils/format'
 import { lastActivity } from '@/utils/project'
@@ -17,18 +15,15 @@ interface PaletteItem {
   title: string
   context: string
   hue?: number
-  icon?: LucideIcon
   run: () => void
 }
 
 /**
  * 빠른 탐색. 평소에는 보이지 않다가 Ctrl/⌘ + K 또는 검색 버튼으로 열린다.
- * 검색어가 없으면 최근 창작물과 자주 쓰는 동작을 보여준다.
+ * 검색어가 없으면 최근 창작물을 보여준다. (추가 · 설정은 상단의 아이콘에서 한다)
  */
 export function SearchPalette({ onClose }: { onClose: () => void }) {
   const nav = useArchiveNav()
-  const add = useAddAction()
-  const openDialog = useUiStore((state) => state.openDialog)
   const categories = useArchiveStore((state) => state.categories)
   const projects = useArchiveStore((state) => state.projects)
   const [query, setQuery] = useState('')
@@ -37,30 +32,11 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
 
   const items = useMemo<PaletteItem[]>(() => {
     const categoryOf = new Map(categories.map((category) => [category.id, category]))
-    // 검색 창을 닫은 뒤에 이동하거나 다음 창을 연다
+    // 검색 창을 닫은 뒤에 이동한다
     const then = (action: () => void) => () => {
       onClose()
       action()
     }
-    const commands: PaletteItem[] = [
-      { key: 'add', group: '동작', title: '창작물 추가', context: '파일을 올리고 기록을 시작합니다', icon: Plus, run: then(add) },
-      {
-        key: 'category',
-        group: '동작',
-        title: '성단 추가',
-        context: '새 카테고리를 만듭니다',
-        icon: Orbit,
-        run: then(() => openDialog({ type: 'category' })),
-      },
-      {
-        key: 'settings',
-        group: '동작',
-        title: '모션 설정',
-        context: '움직임의 세기와 속도를 조절합니다',
-        icon: SlidersHorizontal,
-        run: then(() => openDialog({ type: 'settings' })),
-      },
-    ]
 
     const needle = query.trim().toLowerCase()
     if (!needle) {
@@ -78,10 +54,10 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
             run: then(() => nav.toProject(project.id)),
           }
         })
-      return [...recent, ...commands]
+      return recent
     }
 
-    const found = searchArchive(needle, categories, projects, LIMITS.searchResults).map<PaletteItem>((result) => ({
+    return searchArchive(needle, categories, projects, LIMITS.searchResults).map<PaletteItem>((result) => ({
       key: `${result.type}-${result.id}`,
       group: result.type === 'category' ? '성단' : '창작물',
       title: result.title,
@@ -89,8 +65,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
       hue: result.hue,
       run: then(() => (result.type === 'category' ? nav.toSystem(result.id) : nav.toProject(result.id))),
     }))
-    return [...found, ...commands.filter((command) => command.title.toLowerCase().includes(needle))]
-  }, [query, categories, projects, nav, add, openDialog, onClose])
+  }, [query, categories, projects, nav, onClose])
 
   useEffect(() => setCursor(0), [query])
   useEffect(() => {
@@ -129,7 +104,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
       </label>
 
       {items.length === 0 ? (
-        <p className="palette__empty">일치하는 기록이 없습니다.</p>
+        <p className="palette__empty">{query.trim() ? '일치하는 기록이 없습니다.' : '아직 창작물이 없습니다.'}</p>
       ) : (
         <ul ref={listRef} id="palette-results" className="palette__list scroll-area" role="listbox">
           {items.map((item, index) => (
@@ -145,9 +120,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
                 onClick={item.run}
                 onPointerMove={() => setCursor(index)}
               >
-                <span className="palette__mark" data-kind={item.icon ? 'command' : 'star'}>
-                  {item.icon && <item.icon aria-hidden="true" />}
-                </span>
+                <span className="palette__mark" data-kind="star" />
                 <span className="palette__title">{item.title}</span>
                 <span className="palette__context">{item.context}</span>
               </button>

@@ -11,7 +11,7 @@ import { useUiStore } from '@/store/uiStore'
 import { formatBytes } from '@/utils/format'
 
 /** 기록이 어디에 얼마나 들어 있는지, 로그아웃, 그리고 전부 비우기 */
-export function DataSettings({ onClose }: { onClose: () => void }) {
+export function DataSettings({ onClose }: { onClose: () => boolean }) {
   const nav = useArchiveNav()
   const categoryCount = useArchiveStore((state) => state.categories.length)
   const projectCount = useArchiveStore((state) => state.projects.length)
@@ -26,9 +26,10 @@ export function DataSettings({ onClose }: { onClose: () => void }) {
 
   const clear = async () => {
     await useArchiveStore.getState().clearAll()
-    useUiStore.getState().notify('공간을 비웠습니다. 이제 첫 창작물을 추가해 보세요.')
-    onClose()
-    nav.toGalaxy()
+    if (onClose()) {
+      useUiStore.getState().notify('공간을 비웠습니다. 이제 첫 창작물을 추가해 보세요.')
+      nav.toGalaxy()
+    }
   }
 
   return (

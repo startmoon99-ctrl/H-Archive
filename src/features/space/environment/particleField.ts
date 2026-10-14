@@ -20,6 +20,13 @@ export const PARTICLE_STRIDE = 15
 const config = spaceConfig.particles
 const FIELD_SEED = 'h-archive-void'
 
+/** buildParticleField가 실제로 읽는 배치 입력. 이름/메모 수정은 입자를 재생성하지 않는다. */
+export function particleFieldKey(layout: SpaceLayout): string {
+  return JSON.stringify([layout.bounds, layout.clusters.map((cluster) => [
+    cluster.category.hue, cluster.nodes.length, cluster.x, cluster.y, cluster.z, cluster.radius, cluster.seed,
+  ])])
+}
+
 interface Particle {
   x: number
   y: number

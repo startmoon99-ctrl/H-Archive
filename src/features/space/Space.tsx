@@ -16,6 +16,7 @@ import { createCameraRig } from './camera/cameraRig'
 import { cameraView, type CameraGoal } from './camera/cameraView'
 import { PostEffects } from './effects/PostEffects'
 import { createEnvironment, type Environment } from './environment/environment'
+import { particleFieldKey } from './environment/particleField'
 import type { ControlOptions } from './interaction/drag'
 import { attachPointerControls } from './interaction/pointerControls'
 import { attachTouchControls } from './interaction/touchControls'
@@ -132,8 +133,12 @@ export function Space() {
     })
   }, [rig, layout, focused])
 
+  const travelContext = useLatest({ route, introPhase, introRevealMs })
+  const { x: goalX, y: goalY, z: goalZ, zoom: goalZoom } = goal
+
   useEffect(() => {
     const before = previousRef.current
+    const { route, introPhase, introRevealMs } = travelContext.current
     previousRef.current = { view: route.view, categoryId: route.categoryId, projectId: route.projectId }
     // 같은 성단 안에서 작품을 열고 닫을 때는 이미지가 건너가는 시간에 맞춰 물러나고 돌아온다
     const sameCluster = before.categoryId === route.categoryId
@@ -145,13 +150,13 @@ export function Space() {
 
     const travelMs = introPhase === 'playing' ? 0 : introPhase === 'revealing' ? introRevealMs : cruise
     if (!placedRef.current || travelMs <= 0) {
-      rig.jumpTo(goal)
+      rig.jumpTo({ x: goalX, y: goalY, z: goalZ, zoom: goalZoom })
       placedRef.current = true
     } else {
-      rig.flyTo(goal, travelMs)
+      rig.flyTo({ x: goalX, y: goalY, z: goalZ, zoom: goalZoom }, travelMs)
     }
-    // 목표 지점이 바뀔 때만 이동한다. 이동 시간은 그 순간의 값을 쓰므로 의존성에 넣지 않는다.
-  }, [rig, goal.x, goal.y, goal.z, goal.zoom])
+    // 좌표가 바뀔 때만 이동한다. 단계/시간만 바뀌어 진행 중인 이동이 재시작되지 않게 최신 ref로 읽는다.
+  }, [rig, goalX, goalY, goalZ, goalZoom, travelContext])
 
   // 최신 값은 ref로 읽어 루프와 조작을 다시 걸지 않는다
   const latest = useLatest({ route, layout, focused, focusedId, viewport, nav, activeId: active?.id ?? null })
@@ -206,9 +211,7 @@ export function Space() {
   }, [viewport.width, viewport.height, viewport.touchUi])
 
   // 성단의 구성이 달라졌을 때만 입자를 다시 만든다
-  const fieldKey = layout.clusters
-    .map((cluster) => `${cluster.category.id}:${cluster.nodes.length}:${Math.round(cluster.x)}:${Math.round(cluster.y)}`)
-    .join('|')
+  const fieldKey = particleFieldKey(layout)
   useEffect(() => {
     environmentRef.current?.rebuild(latest.current.layout, density, viewport.scale)
   }, [fieldKey, density, viewport.scale, viewport.touchUi, latest])
@@ -381,7 +384,7 @@ export function Space() {
       </div>
 
       {ready && introPhase !== 'playing' && (
-        <SpaceSummary categories={categories} projects={projects} visible={route.view === 'galaxy'} />
+        <SpaceSummary empty={categories.length === 0} visible={route.view === 'galaxy'} />
       )}
       {/* key: 다른 성단으로 옮기면 등장 애니메이션과 스크롤 위치를 새로 시작한다 */}
       {route.view === 'system' && focused && <ClusterTitle key={`title-${focusedId}`} cluster={focused} />}

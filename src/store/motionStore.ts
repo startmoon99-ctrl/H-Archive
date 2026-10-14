@@ -42,7 +42,8 @@ function loadPersisted(): Persisted {
       settings: { ...fallback.settings, ...saved.settings },
       followSystem: saved.followSystem ?? true,
     }
-  } catch {
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn('[motion] 저장된 설정을 읽지 못해 기본 설정을 사용합니다.', error)
     return fallback
   }
 }
@@ -71,7 +72,12 @@ export function initMotion(): void {
       settings: state.settings,
       followSystem: state.followSystem,
     }
-    localStorage.setItem(STORAGE_KEYS.motion, JSON.stringify(persisted))
+    try {
+      localStorage.setItem(STORAGE_KEYS.motion, JSON.stringify(persisted))
+    } catch (error) {
+      // 설정은 이미 메모리와 화면에 적용됐다. 영속화 실패가 앱 시작/설정 변경을 막지 않는다.
+      if (import.meta.env.DEV) console.warn('[motion] 설정을 메모리에서만 유지합니다.', error)
+    }
   }
   sync(useMotionStore.getState())
   useMotionStore.subscribe(sync)

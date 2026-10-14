@@ -13,8 +13,9 @@ import type {
   TimelineEntry,
 } from '@/types/archive'
 import { createId } from '@/utils/id'
-import { allMedia } from '@/utils/project'
+import { allMedia, storedMediaKeys as storedKeys } from '@/utils/project'
 import { createSerialQueue } from '@/utils/serialQueue'
+import { createKeyedQueue } from '@/utils/keyedQueue'
 import { createVideoPreview, describeImage, describeVideo, type VisualInfo } from './mediaProcessing'
 import { mediaStorage, repository } from './storage'
 import { StorageQuotaError, type StorageEstimate } from './storage/types'
@@ -57,6 +58,8 @@ export interface EntryDraft {
   links: LinkRef[]
   /** 남겨 둘 기존 미디어 */
   media: MediaAsset[]
+  /** 사용자가 대표 미디어를 바꿨을 때만 전달한다. 기록과 한 번에 확정한다. */
+  coverMediaId?: ID | null
 }
 
 export interface SaveProgress {
@@ -87,6 +90,46 @@ const DESCRIBERS: Partial<Record<MediaKind, (file: Blob) => Promise<VisualInfo>>
 }
 
 const listeners = new Set<(project: Project) => void>()
+const writes = createKeyedQueue()
+let clearing: Promise<void> = Promise.resolve()
+
+function withProject<T>(id: ID, work: () => Promise<T>): Promise<T> {
+  const barrier = clearing
+  return writes.run(id, async () => {
+    await barrier
+    return work()
+  })
+}
+
+/** 메타데이터가 최종 상태다. 로컬 정리 실패는 저장 성공을 취소하지 않고 재시도 목록에 남긴다. */
+async function cleanup(keys: string[] = []): Promise<void> {
+  if (!mediaStorage.retryCleanup) {
+    await mediaStorage.remove(keys)
+    return
+  }
+  try {
+    if (keys.length > 0) await mediaStorage.remove(keys)
+    else await mediaStorage.retryCleanup()
+  } catch (error) {
+    console.warn('[archive] 파일 정리를 다음 작업 또는 실행 때 재시도합니다.', error)
+  }
+}
+
+function requireProject(project: Project | undefined): Project {
+  if (!project) throw new Error('프로젝트가 삭제되어 저장하지 못했습니다.')
+  return project
+}
+
+async function changeProject(
+  id: ID,
+  change: (current: Project | undefined) => Project | undefined,
+): Promise<Project | undefined> {
+  if (repository.mutateProject) return repository.mutateProject(id, change)
+  const next = change(await repository.getProject(id))
+  if (next) await repository.saveProject(next)
+  else await repository.deleteProject(id)
+  return next
+}
 
 function now(): string {
   return new Date().toISOString()
@@ -96,40 +139,41 @@ function stored(key: string): MediaSource {
   return { type: 'stored', key }
 }
 
-function storedKeys(assets: MediaAsset[]): string[] {
-  return assets
-    .flatMap((asset) => [asset.original, asset.thumbnail, asset.display, asset.preview])
-    .flatMap((source) => (source?.type === 'stored' ? [source.key] : []))
-}
-
-async function patchAsset(projectId: ID, assetId: ID, patch: Partial<MediaAsset>): Promise<void> {
-  const project = await repository.getProject(projectId)
-  if (!project) return
-  const next: Project = {
-    ...project,
-    timeline: project.timeline.map((entry) => ({
-      ...entry,
-      media: entry.media.map((asset) => (asset.id === assetId ? { ...asset, ...patch } : asset)),
-    })),
-  }
-  await repository.saveProject(next)
-  for (const listener of listeners) listener(next)
-}
-
 const enqueuePreview = createSerialQueue<PreviewJob>(async ({ projectId, assetId, source }) => {
   const key = `${projectId}/${assetId}`
-  let preview: Blob | null = null
-  try {
-    const original = source ?? (await mediaStorage.getBlob(`${key}/original`))
-    preview = original ? await createVideoPreview(original) : null
-    if (preview) await mediaStorage.put(`${key}/preview`, preview)
-  } finally {
-    // 실패해도 대기 표시는 지운다(썸네일만으로 동작한다)
-    await patchAsset(projectId, assetId, {
-      previewPending: false,
-      ...(preview ? { preview: stored(`${key}/preview`) } : {}),
-    })
-  }
+  const original = source ?? (await mediaStorage.getBlob(`${key}/original`))
+  if (!original) return // 원본을 읽지 못하면 다음 실행에서 재시도한다.
+  const preview = await createVideoPreview(original)
+  await withProject(projectId, async () => {
+    const current = await repository.getProject(projectId)
+    if (!current || !allMedia(current).some((asset) => asset.id === assetId && asset.previewPending)) return
+    const previewKey = `${key}/preview`
+    if (preview) await mediaStorage.put(previewKey, preview)
+    try {
+      const next = await changeProject(projectId, (project) => {
+        if (!project) return undefined
+        return {
+          ...project,
+          timeline: project.timeline.map((entry) => ({
+            ...entry,
+            media: entry.media.map((asset) => asset.id === assetId ? {
+              ...asset,
+              previewPending: false,
+              ...(preview ? { preview: stored(previewKey) } : {}),
+            } : asset),
+          })),
+        }
+      })
+      if (next) for (const listener of listeners) listener(next)
+      // 생성 중 다른 탭에서 기록/작품을 삭제했을 수 있다. 참조된 파일은 로컬 cleanup이 보호한다.
+      if (preview && !next?.timeline.some((entry) => entry.media.some((asset) => asset.id === assetId))) {
+        await cleanup([previewKey])
+      }
+    } catch (error) {
+      if (preview) await cleanup([previewKey])
+      throw error
+    }
+  })
 })
 
 async function ingestFile(projectId: ID, file: File, warnings: string[]): Promise<MediaAsset | null> {
@@ -162,6 +206,7 @@ async function ingestFile(projectId: ID, file: File, warnings: string[]): Promis
     asset.original = stored(`${key}/original`)
   } catch (error) {
     if (!asset.thumbnail) {
+      await cleanup(storedKeys([asset]))
       warnings.push(`「${file.name}」을 저장하지 못했습니다.`)
       return null
     }
@@ -172,7 +217,7 @@ async function ingestFile(projectId: ID, file: File, warnings: string[]): Promis
     )
   }
 
-  if (kind === 'video') asset.previewPending = true
+  if (kind === 'video' && asset.original) asset.previewPending = true
   return asset
 }
 
@@ -182,7 +227,9 @@ async function ingestFiles(
   onProgress: ProgressFn | undefined,
   warnings: string[],
 ): Promise<{ assets: MediaAsset[]; jobs: PreviewJob[] }> {
-  if (files.length > 0) void navigator.storage?.persist?.()
+  if (files.length > 0) {
+    void navigator.storage?.persist?.().catch((error) => console.warn('[archive] 영구 저장 권한 요청 실패', error))
+  }
   const assets: MediaAsset[] = []
   const jobs: PreviewJob[] = []
   for (const [index, file] of files.entries()) {
@@ -195,15 +242,26 @@ async function ingestFiles(
   return { assets, jobs }
 }
 
-async function commit(project: Project, jobs: PreviewJob[] = []): Promise<Project> {
-  const next = { ...project, updatedAt: now() }
-  await repository.saveProject(next)
+async function commit(
+  id: ID,
+  change: (current: Project | undefined) => Project,
+  jobs: PreviewJob[] = [],
+  assets: MediaAsset[] = [],
+): Promise<Project> {
+  let next: Project
+  try {
+    next = requireProject(await changeProject(id, (current) => ({ ...change(current), updatedAt: now() })))
+  } catch (error) {
+    await cleanup(storedKeys(assets))
+    throw error
+  }
   for (const job of jobs) enqueuePreview(job)
   return next
 }
 
 export const archiveService = {
   async load(): Promise<ArchiveSnapshot> {
+    await cleanup()
     const snapshot = await repository.load()
     // 지난번에 끝내지 못한 Preview 생성을 이어서 한다. 원본을 다시 읽어야 하므로 큰 파일은 건너뛴다.
     for (const project of snapshot.projects) {
@@ -231,81 +289,115 @@ export const archiveService = {
     return category
   },
 
-  removeCategory(id: ID): Promise<void> {
+  async removeCategory(id: ID): Promise<void> {
+    const snapshot = await repository.load()
+    if (snapshot.projects.some((project) => project.categoryId === id)) {
+      throw new Error('창작물이 있는 성단은 지울 수 없습니다.')
+    }
     return repository.deleteCategory(id)
   },
 
   async createProject(draft: ProjectDraft, files: File[], onProgress?: ProgressFn): Promise<SaveResult> {
     const id = createId()
-    const warnings: string[] = []
-    const { assets, jobs } = await ingestFiles(id, files, onProgress, warnings)
-    const { firstMemo, ...fields } = draft
-    const firstEntry: TimelineEntry = {
-      id: createId(),
-      date: draft.startedAt,
-      title: FIRST_ENTRY_TITLE,
-      memo: firstMemo,
-      version: '',
-      tech: [],
-      links: [],
-      media: assets,
-    }
-    const hasFirstEntry = assets.length > 0 || firstMemo.trim() !== ''
-    const project = await commit(
-      {
-        ...fields,
+    return withProject(id, async () => {
+      const warnings: string[] = []
+      const { assets, jobs } = await ingestFiles(id, files, onProgress, warnings)
+      const { firstMemo, ...fields } = draft
+      const firstEntry: TimelineEntry = {
+        id: createId(),
+        date: draft.startedAt,
+        title: FIRST_ENTRY_TITLE,
+        memo: firstMemo,
+        version: '',
+        tech: [],
+        links: [],
+        media: assets,
+      }
+      const hasFirstEntry = assets.length > 0 || firstMemo.trim() !== ''
+      const project = await commit(
         id,
-        createdAt: now(),
-        updatedAt: now(),
-        coverMediaId: null,
-        timeline: hasFirstEntry ? [firstEntry] : [],
-      },
-      jobs,
-    )
-    return { project, warnings }
+        () => ({
+          ...fields,
+          id,
+          createdAt: now(),
+          updatedAt: now(),
+          coverMediaId: null,
+          timeline: hasFirstEntry ? [firstEntry] : [],
+        }),
+        jobs,
+        assets,
+      )
+      return { project, warnings }
+    })
   },
 
   updateProject(project: Project, patch: ProjectPatch): Promise<Project> {
-    return commit({ ...project, ...patch })
+    return withProject(project.id, () => commit(project.id, (current) => ({ ...requireProject(current), ...patch })))
   },
 
   async removeProject(project: Project): Promise<void> {
-    await repository.deleteProject(project.id)
-    await mediaStorage.remove(storedKeys(allMedia(project)))
+    return withProject(project.id, async () => {
+      const current = await repository.getProject(project.id)
+      await repository.deleteProject(project.id)
+      await cleanup(current ? storedKeys(allMedia(current)) : [])
+    })
   },
 
   async saveEntry(project: Project, draft: EntryDraft, files: File[], onProgress?: ProgressFn): Promise<SaveResult> {
-    const warnings: string[] = []
-    const { assets, jobs } = await ingestFiles(project.id, files, onProgress, warnings)
-    const previous = project.timeline.find((entry) => entry.id === draft.id)
-    const entry: TimelineEntry = { ...draft, id: draft.id ?? createId(), media: [...draft.media, ...assets] }
-    const timeline = previous
-      ? project.timeline.map((item) => (item.id === entry.id ? entry : item))
-      : [...project.timeline, entry]
+    return withProject(project.id, async () => {
+      const warnings: string[] = []
+      const { assets, jobs } = await ingestFiles(project.id, files, onProgress, warnings)
+      let removed: MediaAsset[] = []
+      const next = await commit(project.id, (current) => {
+        const latestProject = requireProject(current)
+        const previous = latestProject.timeline.find((entry) => entry.id === draft.id)
+        if (draft.id && !previous) throw new Error('기록이 삭제되어 저장하지 못했습니다.')
+        // 폼을 연 뒤 완료된 preview 등 파일 필드는 최신 저장값을 유지한다.
+        const kept = draft.media.flatMap((asset) => {
+          const latest = previous?.media.find((item) => item.id === asset.id)
+          return latest ? [latest] : []
+        })
+        const { coverMediaId, ...entryFields } = draft
+        const entry: TimelineEntry = { ...entryFields, id: draft.id ?? createId(), media: [...kept, ...assets] }
+        const timeline = previous
+          ? latestProject.timeline.map((item) => (item.id === entry.id ? entry : item))
+          : [...latestProject.timeline, entry]
 
-    const keptIds = new Set(entry.media.map((asset) => asset.id))
-    const removed = previous?.media.filter((asset) => !keptIds.has(asset.id)) ?? []
-    const coverRemoved = removed.some((asset) => asset.id === project.coverMediaId)
-
-    const next = await commit(
-      { ...project, timeline, coverMediaId: coverRemoved ? null : project.coverMediaId },
-      jobs,
-    )
-    await mediaStorage.remove(storedKeys(removed))
-    return { project: next, warnings }
+        const keptIds = new Set(entry.media.map((asset) => asset.id))
+        removed = previous?.media.filter((asset) => !keptIds.has(asset.id)) ?? []
+        const coverRemoved = removed.some((asset) => asset.id === latestProject.coverMediaId)
+        const selectedCover = coverMediaId === undefined
+          ? (coverRemoved ? null : latestProject.coverMediaId)
+          : coverMediaId
+        return {
+          ...latestProject,
+          timeline,
+          coverMediaId: timeline.some((item) => item.media.some((asset) => asset.id === selectedCover)) ? selectedCover : null,
+        }
+      }, jobs, assets)
+      await cleanup(storedKeys(removed))
+      return { project: next, warnings }
+    })
   },
 
   async removeEntry(project: Project, entryId: ID): Promise<Project> {
-    const entry = project.timeline.find((item) => item.id === entryId)
-    if (!entry) return project
-    const coverRemoved = entry.media.some((asset) => asset.id === project.coverMediaId)
-    const next = await commit({
-      ...project,
-      timeline: project.timeline.filter((item) => item.id !== entryId),
-      coverMediaId: coverRemoved ? null : project.coverMediaId,
+    return withProject(project.id, async () => {
+      let removed: MediaAsset[] = []
+      const next = await commit(project.id, (current) => {
+        const latest = requireProject(current)
+        const entry = latest.timeline.find((item) => item.id === entryId)
+        if (!entry) return latest
+        const coverRemoved = entry.media.some((asset) => asset.id === latest.coverMediaId)
+        removed = entry.media
+        return {
+          ...latest,
+          timeline: latest.timeline.filter((item) => item.id !== entryId),
+          coverMediaId: coverRemoved ? null : latest.coverMediaId,
+        }
+      })
+      await cleanup(storedKeys(removed))
+      return next
     })
-    await mediaStorage.remove(storedKeys(entry.media))
-    return next
   },
 
   /** 미디어 위치를 화면에서 쓸 수 있는 주소로 바꾼다. */
@@ -313,9 +405,22 @@ export const archiveService = {
     return source.type === 'url' ? source.url : mediaStorage.getUrl(source.key)
   },
 
+  releaseMediaUrl(key: string, url: string): void {
+    mediaStorage.releaseUrl?.(key, url)
+  },
+
   async clearAll(): Promise<void> {
-    await repository.clear()
-    await mediaStorage.clear()
+    const previous = clearing
+    const draining = writes.drain()
+    const operation = (async () => {
+      await previous
+      await draining
+      await repository.clear()
+      if (mediaStorage.retryCleanup) await cleanup()
+      else await mediaStorage.clear()
+    })()
+    clearing = operation.catch(() => undefined)
+    return operation
   },
 
   estimateStorage(): Promise<StorageEstimate | null> {

@@ -16,6 +16,7 @@ export interface TravelOrigin {
 
 interface UiState {
   dialog: DialogDescriptor | null
+  dialogId: number
   /**
    * 추가 폼에 올라와 있는 파일. Drag & Drop은 폼이 열려 있는 중에도 일어나므로
    * 폼 안이 아니라 여기에 두고, 창이 닫히면 비운다.
@@ -35,7 +36,7 @@ interface UiState {
   toasts: Toast[]
 
   openDialog: (dialog: DialogDescriptor) => void
-  closeDialog: () => void
+  closeDialog: (expectedId?: number) => boolean
   stageFiles: (files: File[]) => void
   setStagedFiles: (files: File[]) => void
   startReveal: (revealMs: number) => void
@@ -51,6 +52,7 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set, get) => ({
   dialog: null,
+  dialogId: 0,
   stagedFiles: [],
   introPhase: 'playing',
   introRun: 0,
@@ -61,8 +63,13 @@ export const useUiStore = create<UiState>((set, get) => ({
   bornProjectId: null,
   toasts: [],
 
-  openDialog: (dialog) => set({ dialog }),
-  closeDialog: () => set({ dialog: null, stagedFiles: [] }),
+  openDialog: (dialog) => set((state) => ({ dialog, dialogId: state.dialogId + 1 })),
+  closeDialog: (expectedId) => {
+    const state = get()
+    if (!state.dialog || (expectedId !== undefined && expectedId !== state.dialogId)) return false
+    set({ dialog: null, stagedFiles: [] })
+    return true
+  },
   stageFiles: (files) => set((state) => ({ stagedFiles: [...state.stagedFiles, ...files] })),
   setStagedFiles: (stagedFiles) => set({ stagedFiles }),
   startReveal: (introRevealMs) => set({ introPhase: 'revealing', introRevealMs }),

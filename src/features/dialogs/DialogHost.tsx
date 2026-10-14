@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react'
+import { Fragment, useCallback, type ReactNode } from 'react'
 import { Dialog, type DialogVariant } from '@/components/Dialog'
 import { CategoryForm } from '@/features/editor/CategoryForm'
 import { EntryForm } from '@/features/editor/EntryForm'
@@ -19,7 +19,7 @@ interface DialogView {
 }
 
 /** store의 dialog 값 → 실제 창. 새 종류의 창은 DialogDescriptor와 여기 한 곳에 추가한다. */
-function describe(dialog: DialogDescriptor, close: () => void): DialogView {
+function describe(dialog: DialogDescriptor, close: () => boolean): DialogView {
   switch (dialog.type) {
     case 'search':
       return { variant: 'palette', label: '검색', key: 'search', body: <SearchPalette onClose={close} /> }
@@ -59,14 +59,16 @@ function describe(dialog: DialogDescriptor, close: () => void): DialogView {
 /** 한 번에 하나의 창만 연다. 닫히는 동안에는 마지막 내용을 그대로 보여준다. */
 export function DialogHost() {
   const dialog = useUiStore((state) => state.dialog)
-  const close = useUiStore((state) => state.closeDialog)
-  const shown = useLastDefined(dialog)
+  const dialogId = useUiStore((state) => state.dialogId)
+  const shown = useLastDefined(dialog ? { dialog, id: dialogId } : null)
+  const shownId = shown?.id
+  const close = useCallback(() => useUiStore.getState().closeDialog(shownId), [shownId])
   if (!shown) return null
 
-  const view = describe(shown, close)
+  const view = describe(shown.dialog, close)
   return (
     <Dialog open={dialog !== null} onClose={close} variant={view.variant} label={view.label}>
-      <Fragment key={view.key}>{view.body}</Fragment>
+      <Fragment key={`${shown.id}:${view.key}`}>{view.body}</Fragment>
     </Dialog>
   )
 }

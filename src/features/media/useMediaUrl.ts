@@ -14,11 +14,19 @@ export function useMediaUrl(source: MediaSource | undefined): string | undefined
   useEffect(() => {
     if (!key) return
     let cancelled = false
+    let acquired: string | undefined
+    setResolved(undefined)
     void archiveService.resolveMediaUrl({ type: 'stored', key }).then((url) => {
-      if (!cancelled && url) setResolved({ key, url })
-    })
+      if (!url) return
+      if (cancelled) archiveService.releaseMediaUrl(key, url)
+      else {
+        acquired = url
+        setResolved({ key, url })
+      }
+    }).catch((error) => console.warn('[media] 파일 주소를 불러오지 못했습니다.', error))
     return () => {
       cancelled = true
+      if (acquired) archiveService.releaseMediaUrl(key, acquired)
     }
   }, [key])
 

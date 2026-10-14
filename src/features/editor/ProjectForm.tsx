@@ -26,7 +26,7 @@ interface ProjectFormProps {
   projectId?: ID
   /** 새 창작물에 미리 골라 둘 성단 */
   categoryId?: ID
-  onClose: () => void
+  onClose: () => boolean
 }
 
 /**
@@ -92,18 +92,18 @@ export function ProjectForm({ projectId, categoryId, onClose }: ProjectFormProps
         progress(`${step.label} (${step.current}/${step.total})`),
       )
       const ui = useUiStore.getState()
-      for (const warning of result.warnings) ui.notify(warning, 'warning')
-      ui.setBornProject(result.project.id)
-      onClose()
-      nav.toSystem(targetCategory)
+      if (onClose()) {
+        for (const warning of result.warnings) ui.notify(warning, 'warning')
+        ui.setBornProject(result.project.id)
+        nav.toSystem(targetCategory)
+      }
     })
 
   const remove = () =>
     submit('지우는 중', async () => {
       if (!project) return
       await useArchiveStore.getState().deleteProject(project.id)
-      onClose()
-      nav.toSystem(project.categoryId)
+      if (onClose()) nav.toSystem(project.categoryId)
     })
 
   return (

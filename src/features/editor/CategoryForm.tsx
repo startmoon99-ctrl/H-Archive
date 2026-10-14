@@ -12,7 +12,7 @@ import { useSubmit } from './useSubmit'
 interface CategoryFormProps {
   /** 있으면 편집, 없으면 새 성단 */
   categoryId?: ID
-  onClose: () => void
+  onClose: () => boolean
 }
 
 /** 성단(카테고리) 추가 · 편집. 창작물이 남아 있는 성단은 지울 수 없다. */
@@ -32,16 +32,14 @@ export function CategoryForm({ categoryId, onClose }: CategoryFormProps) {
       const saved = await useArchiveStore
         .getState()
         .saveCategory({ name: name.trim(), description: description.trim(), hue }, category?.id)
-      onClose()
-      if (!category) nav.toSystem(saved.id)
+      if (onClose() && !category) nav.toSystem(saved.id)
     })
 
   const remove = () =>
     submit('지우는 중', async () => {
       if (!category) return
       await useArchiveStore.getState().deleteCategory(category.id)
-      onClose()
-      nav.toGalaxy()
+      if (onClose()) nav.toGalaxy()
     })
 
   return (

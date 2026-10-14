@@ -137,7 +137,7 @@ config/motion.ts ─ motionStore(설정 · 저장 · 시스템 '동작 줄이기
 - 작품 ↔ 상세 화면: 누른 작품의 이미지가 상세 화면의 대표 이미지 자리까지 이어서 이동하고, 닫으면 작품이 지금 있는 자리로 돌아간다(`features/project/SharedCover` — 이동하는 동안만 보이는 사본). 그동안 카메라는 한발 물러난다(`camera.projectZoomFactor`). 공간과 상세 화면은 서로를 모르고 `uiStore.travelOrigin`(출발 자리 · 이미지) · `uiStore.awayProjectId`(프레임을 비운 작품) · `motion/travel.ts`(돌아갈 자리)로만 이어진다. 이어 줄 이미지가 없으면(이미지 없는 작품 · 검색 · 주소로 바로 옴) 예전처럼 프레임 자리에서 창이 열리고, 움직임 최소화에서는 투명도만 바뀐다.
 - 상세 화면 뒤에서도 공간은 끊기지 않는다: 성단 · 작품(DOM)은 물러나 쉬고, 입자만 낮은 빈도로 이어 그려 옅게 비친다(`--opacity-veil` · `quality.behindFrameMs`).
 - 대화상자는 한 번에 하나다. `uiStore.openDialog({ type })` → `features/dialogs/DialogHost.tsx`가 내용을 고른다.
-- "추가"의 뜻은 위치에 따라 다르다(`app/useAddAction.ts`): 프로젝트 안에서는 새 기록, 그 밖에서는 새 창작물. + 버튼과 Drag & Drop이 함께 쓴다.
+- "추가"의 뜻은 위치에 따라 다르다(`app/useAddAction.ts`): 프로젝트 안에서는 새 기록, 그 밖에서는 새 창작물. Drag & Drop과 + 버튼의 추가 메뉴(`features/hud/AddMenu` — 이 동작 + 성단 추가)가 함께 쓴다. 상단 동작 버튼은 아이콘만 보이고 이름은 `aria-label` · 툴팁으로 남긴다.
 
 ## 그 밖의 폴더
 

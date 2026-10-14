@@ -81,14 +81,24 @@ function openDb(): Promise<IDBDatabase> {
 export async function transact<T = void>(
   names: StoreName[],
   mode: IDBTransactionMode,
-  run: (tx: IDBTransaction) => IDBRequest<T> | void,
+  run: (tx: IDBTransaction, abort: (cause: unknown) => void) => IDBRequest<T> | void,
 ): Promise<T> {
   const db = await openDb()
   return new Promise<T>((resolve, reject) => {
     const tx = db.transaction(names, mode)
-    const request = run(tx)
+    let failure: unknown
+    let request: IDBRequest<T> | void
     tx.oncomplete = () => resolve((request ? request.result : undefined) as T)
-    tx.onerror = () => reject(toStorageError(tx.error))
-    tx.onabort = () => reject(toStorageError(tx.error))
+    tx.onerror = () => reject(failure ?? toStorageError(tx.error))
+    tx.onabort = () => reject(failure ?? toStorageError(tx.error))
+    const abort = (cause: unknown) => {
+      failure = cause
+      tx.abort()
+    }
+    try {
+      request = run(tx, abort)
+    } catch (error) {
+      abort(error)
+    }
   })
 }

@@ -13,6 +13,10 @@ export function useAddAction(): (files?: File[]) => void {
   return useCallback(
     (files = []) => {
       const ui = useUiStore.getState()
+      if (files.length > 0 && ui.dialog?.type === 'project' && ui.dialog.projectId) {
+        ui.notify('창작물 편집에서는 파일을 추가할 수 없습니다. 편집창을 닫고 기록 추가에서 넣어 주세요.', 'warning')
+        return
+      }
       ui.stageFiles(files)
       const formOpen = ui.dialog?.type === 'project' || ui.dialog?.type === 'entry'
       if (formOpen && files.length > 0) return

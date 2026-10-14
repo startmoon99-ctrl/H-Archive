@@ -90,10 +90,6 @@
   box-shadow: 0 0 10px oklch(0.7 var(--chroma-tint) var(--hue, 280) / var(--m-glow));
 }
 
-.palette__mark svg {
-  width: 1.125rem;
-  height: 1.125rem;
-}
 
 .palette__title {
   overflow: hidden;
