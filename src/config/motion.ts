@@ -2,7 +2,8 @@
  * 모션의 단일 출처.
  * - motionTokens: 시간 · easing · 거리 같은 기준값
  * - motionPresets / motionControls: Motion Settings가 그대로 그리는 프리셋과 조절 항목
- * - galaxyMotion / projectMotion: 기능별 모션 수치
+ * - projectMotion: 상세 화면의 모션 수치
+ * 공간(장면)의 카메라 · 조작 · 입자 수치는 config/space.ts에 있다.
  * 실제 적용은 motion/runtime.ts가 맡는다(설정 배율을 곱해 CSS 변수와 JS 양쪽에 같은 값을 준다).
  */
 
@@ -30,6 +31,8 @@ export const motionTokens = {
   magnetic: { strength: 0.28, maxShift: 14 },
   tilt: { maxDeg: 9 },
   cursorGlow: { smoothing: 0.11 },
+  /** 평상시 움직임이 0이어도 0으로 나누지 않도록 하는 하한 */
+  minAmbientRate: 0.05,
 } as const
 
 export type DurationToken = keyof typeof motionTokens.duration
@@ -149,39 +152,33 @@ const AMOUNT = { min: 0, max: 1.5, step: 0.05 }
 export const motionControls: MotionControl[] = [
   { key: 'intensity', label: 'Motion Intensity', hint: '등장 · 전환 효과의 크기', ...AMOUNT },
   { key: 'parallax', label: 'Parallax Strength', hint: '마우스에 따른 공간의 깊이감', ...AMOUNT },
-  { key: 'particles', label: 'Particle Density', hint: '별과 먼지의 양', ...AMOUNT },
+  { key: 'particles', label: 'Particle Density', hint: '공간을 채우는 입자의 양', ...AMOUNT },
   { key: 'glow', label: 'Glow / Bloom', hint: '빛 번짐의 세기', ...AMOUNT },
   { key: 'tilt', label: 'Card Tilt', hint: '카드가 마우스를 따라 기우는 정도', ...AMOUNT },
-  { key: 'background', label: 'Background Motion', hint: '공전 · 반짝임 · 표류 속도', ...AMOUNT },
+  { key: 'background', label: 'Background Motion', hint: '떠 있는 움직임 · 반짝임 · 표류', ...AMOUNT },
   { key: 'speed', label: 'Transition Speed', hint: '화면 전환 속도', min: 0.5, max: 2, step: 0.05 },
   { key: 'mouseFollow', label: 'Mouse Follow', hint: '커서를 따라오는 빛과 버튼 반응', ...AMOUNT },
 ]
 
-function easeInOutQuint(t: number): number {
-  return t < 0.5 ? 16 * t ** 5 : 1 - (-2 * t + 2) ** 5 / 2
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2
 }
 
-export const galaxyMotion = {
-  camera: {
-    /** 항성계로 이동할 때의 가감속 곡선 */
-    travelEase: easeInOutQuint,
-    /** 드래그를 놓은 뒤 프레임(16ms)마다 남는 속도 비율 */
-    inertiaFriction: 0.93,
-    minInertia: 0.01,
-  },
-  parallax: {
-    /** 마우스가 화면 끝에 있을 때 은하가 밀리는 거리(px) */
-    worldShift: 20,
-    /** 마우스에 따른 은하 평면의 최대 기울기(deg) */
-    tiltDeg: 3.2,
-    smoothing: 0.06,
-    perspective: 1400,
-  },
-  /** 평상시 움직임이 0이어도 0으로 나누지 않도록 하는 하한 */
-  minAmbientRate: 0.05,
-} as const
-
-export const projectMotion = {
+export const projectMotion: {
+  heroParallax: number
+  travel: DurationToken
+  travelEase: (t: number) => number
+  returnArc: { ratio: number; maxViewport: number }
+} = {
   /** 상세 화면을 스크롤할 때 대표 이미지가 따라 움직이는 비율 */
   heroParallax: 0.18,
-} as const
+  /** 작품의 이미지가 공간과 상세 화면 사이를 건너가는 시간과 가감속. 카메라가 물러나고 돌아오는 시간도 같다. */
+  travel: 'slow',
+  travelEase: easeInOutCubic,
+  /**
+   * 돌아갈 때 그리는 호: 곧게 줄어드는 대신 위로 살짝 떴다가 제자리에 내려앉는다.
+   * 높이 = 이동 거리와 줄어드는 폭 중 큰 쪽 × ratio(대표 이미지와 작품이 가까워도 돌아가는 길이 보이게),
+   * 화면 높이 × maxViewport를 넘지 않는다.
+   */
+  returnArc: { ratio: 0.16, maxViewport: 0.07 },
+}

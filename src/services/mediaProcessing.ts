@@ -3,7 +3,7 @@ import { clamp } from '@/utils/math'
 
 /**
  * 브라우저 안에서 썸네일과 가벼운 Preview를 만든다.
- * 은하 화면과 카드는 여기서 만든 파일만 불러오고 원본은 건드리지 않는다.
+ * 공간 화면과 카드는 여기서 만든 파일만 불러오고 원본은 건드리지 않는다.
  */
 
 export interface VisualInfo {

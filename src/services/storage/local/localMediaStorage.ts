@@ -35,7 +35,7 @@ export class LocalMediaStorage implements MediaStorage {
   }
 
   clear(): Promise<void> {
-    for (const key of [...this.urls.keys()]) this.revoke(key)
+    for (const key of this.urls.keys()) this.revoke(key)
     return transact([files], 'readwrite', (tx) => void tx.objectStore(files).clear())
   }
 

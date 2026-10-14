@@ -5,12 +5,12 @@ import { useArchiveStore } from '@/store/archiveStore'
 import { useUiStore, type TravelOrigin } from '@/store/uiStore'
 import type { ID } from '@/types/archive'
 
-/** galaxy: 은하 전체 / system: 항성계 안 / project: 프로젝트 상세 */
+/** galaxy: 공간 전체 / system: 성단 안 / project: 프로젝트 상세 */
 export type ArchiveView = 'galaxy' | 'system' | 'project'
 
 export interface ArchiveRoute {
   view: ArchiveView
-  /** 지금 머무는 항성계. 프로젝트 화면에서는 그 프로젝트가 속한 항성계다. */
+  /** 지금 머무는 성단. 프로젝트 화면에서는 그 프로젝트가 속한 성단이다. */
   categoryId: ID | null
   projectId: ID | null
 }
@@ -39,7 +39,7 @@ export function useArchiveNav() {
 
   const toGalaxy = useCallback(() => navigate(routes.galaxy()), [navigate])
   const toSystem = useCallback((categoryId: ID) => navigate(routes.system(categoryId)), [navigate])
-  /** origin을 주면 그 지점에서 화면이 열리고 카메라가 그곳으로 다가간다. */
+  /** origin(눌렀던 프레임의 자리)을 주면 상세 화면이 그 자리에서 커지며 열린다. */
   const toProject = useCallback(
     (projectId: ID, origin: TravelOrigin | null = null) => {
       setTravelOrigin(origin)
@@ -47,7 +47,7 @@ export function useArchiveNav() {
     },
     [navigate, setTravelOrigin],
   )
-  /** 한 단계 위로: 프로젝트 → 항성계 → 은하 */
+  /** 한 단계 위로: 프로젝트 → 성단 → 공간 */
   const back = useCallback(() => {
     if (route.view === 'project' && route.categoryId) navigate(routes.system(route.categoryId))
     else navigate(routes.galaxy())

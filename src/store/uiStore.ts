@@ -1,13 +1,17 @@
 import { create } from 'zustand'
 import { LIMITS } from '@/config/app'
 import type { ID } from '@/types/archive'
-import type { DialogDescriptor, IntroPhase, Point, Toast } from '@/types/ui'
+import type { DialogDescriptor, IntroPhase, Toast } from '@/types/ui'
 import { createId } from '@/utils/id'
 
-/** 프로젝트로 들어갈 때의 출발점. 화면 좌표는 전환 효과에, world 좌표는 카메라 이동에 쓴다. */
+/** 프로젝트로 들어갈 때 눌렀던 프레임의 화면 위치(px). 상세 화면이 이 자리에서 커지며 열린다. */
 export interface TravelOrigin {
-  screen: Point
-  world: Point
+  x: number
+  y: number
+  width: number
+  height: number
+  /** 그 자리에 보이던 이미지의 주소. 있으면 같은 이미지가 상세 화면의 대표 이미지 자리까지 이어서 이동한다. */
+  src?: string
 }
 
 interface UiState {
@@ -20,10 +24,12 @@ interface UiState {
   introPhase: IntroPhase
   /** 다시 보기를 누를 때마다 늘어나 Intro를 새로 시작시킨다 */
   introRun: number
-  /** 인트로가 끝난 뒤 카메라가 은하로 다가오는 시간(ms) */
+  /** 인트로가 끝난 뒤 카메라가 공간으로 다가오는 시간(ms) */
   introRevealMs: number
   isDraggingFiles: boolean
   travelOrigin: TravelOrigin | null
+  /** 이미지가 상세 화면으로 건너가 있어 공간에서는 프레임을 비워 둔 작품 */
+  awayProjectId: ID | null
   /** 방금 만들어져 등장 애니메이션을 보여줄 프로젝트 */
   bornProjectId: ID | null
   toasts: Toast[]
@@ -37,8 +43,9 @@ interface UiState {
   replayIntro: () => void
   setDraggingFiles: (dragging: boolean) => void
   setTravelOrigin: (origin: TravelOrigin | null) => void
+  setAwayProject: (id: ID | null) => void
   setBornProject: (id: ID | null) => void
-  notify: (message: string, tone?: Toast['tone']) => void
+  notify: (message: string, tone?: Toast['tone'], action?: Toast['action']) => void
   dismissToast: (id: ID) => void
 }
 
@@ -50,6 +57,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   introRevealMs: 0,
   isDraggingFiles: false,
   travelOrigin: null,
+  awayProjectId: null,
   bornProjectId: null,
   toasts: [],
 
@@ -63,12 +71,14 @@ export const useUiStore = create<UiState>((set, get) => ({
     set((state) => ({ dialog: null, stagedFiles: [], introPhase: 'playing', introRun: state.introRun + 1 })),
   setDraggingFiles: (isDraggingFiles) => set({ isDraggingFiles }),
   setTravelOrigin: (travelOrigin) => set({ travelOrigin }),
+  setAwayProject: (awayProjectId) => set({ awayProjectId }),
   setBornProject: (bornProjectId) => set({ bornProjectId }),
 
-  notify: (message, tone = 'info') => {
+  notify: (message, tone = 'info', action) => {
     const id = createId()
-    set((state) => ({ toasts: [...state.toasts, { id, message, tone }] }))
-    window.setTimeout(() => get().dismissToast(id), LIMITS.toastMs)
+    set((state) => ({ toasts: [...state.toasts, { id, message, tone, action }] }))
+    // 눌러야 하는 알림은 스스로 사라지지 않는다
+    if (!action) window.setTimeout(() => get().dismissToast(id), LIMITS.toastMs)
   },
   dismissToast: (id) => set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) })),
 }))

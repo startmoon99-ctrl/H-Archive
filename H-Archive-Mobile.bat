@@ -4,6 +4,27 @@ setlocal
 title H Archive - Mobile Test
 cd /d "%~dp0"
 
+rem 5183 포트에 이미 서버가 떠 있으면 새로 실행하지 않는다(vite.config.ts의 strictPort 때문에 두 번째 실행은 실패한다)
+netstat -ano | findstr /R /C:":5183 .*LISTENING" >nul
+if errorlevel 1 goto :launch
+rem 모든 주소(0.0.0.0 / ::)에서 받고 있어야 휴대폰에서 접속할 수 있다. localhost만 받는 서버는 H-Archive-Start.bat으로 띄운 것이다
+netstat -ano | findstr "LISTENING" | findstr /L /C:"0.0.0.0:5183 " /C:"[::]:5183 " >nul
+if errorlevel 1 goto :local_only
+echo H Archive가 이미 실행 중입니다. 같은 Wi-Fi의 휴대폰에서 아래 주소 중 하나로 접속하세요.
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do for /f "tokens=*" %%b in ("%%a") do echo   http://%%b:5183
+start "" "http://localhost:5183"
+pause
+goto :eof
+
+:local_only
+echo [안내] 이미 실행 중인 H Archive는 이 PC에서만 열리는 서버(H-Archive-Start.bat)입니다.
+echo 휴대폰에서 접속하려면 그 창에서 Ctrl + C로 서버를 끈 뒤 이 파일을 다시 실행하세요.
+start "" "http://localhost:5183"
+pause
+goto :eof
+
+:launch
+
 if not exist "package.json" (
   echo [오류] 이 파일은 H Archive 프로젝트 폴더 안에 있어야 합니다.
   goto :fail

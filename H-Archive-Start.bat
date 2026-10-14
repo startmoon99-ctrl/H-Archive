@@ -4,6 +4,14 @@ setlocal
 title H Archive
 cd /d "%~dp0"
 
+rem 5183 포트에 이미 서버가 떠 있으면 새로 실행하지 않고 그 주소만 연다(vite.config.ts의 strictPort 때문에 두 번째 실행은 실패한다)
+netstat -ano | findstr /R /C:":5183 .*LISTENING" >nul
+if not errorlevel 1 (
+  echo H Archive가 이미 실행 중입니다. 브라우저로 엽니다: http://localhost:5183
+  start "" "http://localhost:5183"
+  goto :eof
+)
+
 if not exist "package.json" (
   echo [오류] 이 파일은 H Archive 프로젝트 폴더 안에 있어야 합니다.
   goto :fail

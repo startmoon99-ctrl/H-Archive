@@ -1,33 +1,67 @@
 /*
- * 프로젝트 화면은 눌렀던 행성 자리(--origin)에서 원으로 열리고, 닫힐 때 그 자리로 돌아간다.
- * 여는 전환은 카메라 이동과 같은 시간(travel), 닫는 전환은 더 짧게(slow) 한다.
+ * 프로젝트 화면이 열리는 방식은 둘이다(data-travel).
+ * - shared: 누른 작품의 이미지가 대표 이미지 자리까지 이어서 이동한다(SharedCover).
+ *   화면은 창을 여는 대신 그 뒤에서 서서히 덮이고, 닫을 때는 이미지가 작품의 자리로 돌아간다.
+ * - frame: 이어 줄 이미지가 없을 때(이미지 없는 작품 · 검색 · 주소로 바로 옴).
+ *   눌렀던 프레임의 자리(--from-*)에서 창이 커지며 열리고, 닫힐 때 그 자리로 돌아간다.
  */
 .project {
   position: fixed;
   inset: 0;
   z-index: var(--z-project);
   background:
-    radial-gradient(ellipse 90% 60% at 85% 0%, oklch(0.32 0.13 var(--hue, 280) / 0.5), transparent 70%),
-    radial-gradient(ellipse 70% 50% at 0% 100%, oklch(0.26 0.11 calc(var(--hue, 280) - 40) / 0.4), transparent 70%),
-    var(--color-space);
-  clip-path: circle(0 at var(--origin-x) var(--origin-y));
-  transition: clip-path var(--dur-slow) var(--ease-cinematic);
+    radial-gradient(ellipse 90% 60% at 85% 0%, oklch(0.2 var(--chroma-tint) var(--hue, 260) / 0.55), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 0% 100%, oklch(0.16 var(--chroma-tint) var(--hue, 260) / 0.5), transparent 70%),
+    /* 뒤의 공간(입자)이 아주 옅게 비쳐 상세 화면에서도 같은 공간 안에 있다는 느낌이 이어진다 */
+    rgb(var(--space-rgb) / var(--opacity-veil));
+  clip-path: inset(var(--from-top) var(--from-right) var(--from-bottom) var(--from-left) round var(--radius-sm));
+  opacity: 0;
+  transition:
+    clip-path var(--dur-slow) var(--ease-cinematic),
+    opacity var(--dur-slow) var(--ease-exit);
 }
 
 .project[data-state='open'] {
-  clip-path: circle(150vmax at var(--origin-x) var(--origin-y));
-  transition-duration: var(--dur-travel);
+  clip-path: inset(0 0 0 0 round 0);
+  opacity: 1;
+  transition:
+    clip-path var(--dur-travel) var(--ease-cinematic),
+    opacity var(--dur-base) var(--ease-standard);
 }
 
-/* 움직임 최소화: 원으로 여는 대신 투명도만 바꾼다 */
+.project:not([data-state='open']) {
+  pointer-events: none;
+}
+
+/* 닫을 때는 일찍 걷어, 이미지가 돌아갈 자리(성단)가 이동 중에 먼저 보이게 한다 */
+.project[data-travel='shared'] {
+  clip-path: none;
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+/* 공간이 물러나는 것이 먼저 보이도록 조금 늦게 덮기 시작한다 */
+.project[data-travel='shared'][data-state='open'] {
+  transition: opacity var(--dur-slow) var(--ease-standard) calc(var(--dur-slow) * 0.12);
+}
+
+/* 대표 이미지는 사본이 도착해 자리를 넘겨줄 때까지 비워 둔다(따로 떠오르지 않는다) */
+.project[data-travel='shared'] .hero__cover {
+  animation: none;
+}
+
+.project[data-cover='away'] .hero__cover {
+  visibility: hidden;
+}
+
+/* 글과 버튼은 이미지가 대표 이미지 자리에 거의 안착한 뒤에 떠오른다 */
+.project[data-travel='shared'] .hero {
+  --enter-base: calc(var(--dur-slow) * 0.9);
+}
+
+/* 움직임 최소화: 프레임에서 여는 대신 투명도만 바꾼다 */
 :root[data-motion='minimal'] .project {
   clip-path: none;
-  opacity: 0;
   transition: opacity var(--dur-slow) var(--ease-standard);
-}
-
-:root[data-motion='minimal'] .project[data-state='open'] {
-  opacity: 1;
 }
 
 /* 스크롤한 내용이 상단의 이름 · 버튼과 겹쳐 보이지 않게 위쪽을 어둡게 덮는다 */

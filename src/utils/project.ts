@@ -29,7 +29,7 @@ export function lastActivity(project: Project): ISODate {
   return project.timeline.reduce((latest, entry) => (entry.date > latest ? entry.date : latest), project.startedAt)
 }
 
-/** 항성 색을 기준으로 프로젝트마다 조금씩 다른 색을 준다. id에서 계산하므로 저장하지 않는다. */
+/** 성단 색을 기준으로 프로젝트마다 조금씩 다른 색을 준다. id에서 계산하므로 저장하지 않는다. */
 export function projectHue(project: Project, categoryHue: number): number {
   const offset = (hashString(project.id) % (PROJECT_HUE_SPREAD * 2 + 1)) - PROJECT_HUE_SPREAD
   return (categoryHue + offset + 360) % 360

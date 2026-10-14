@@ -24,19 +24,19 @@ const NEW_CATEGORY = '__new__'
 interface ProjectFormProps {
   /** 있으면 편집, 없으면 새 창작물 */
   projectId?: ID
-  /** 새 창작물에 미리 골라 둘 항성계 */
+  /** 새 창작물에 미리 골라 둘 성단 */
   categoryId?: ID
   onClose: () => void
 }
 
 /**
  * 창작물 추가 · 편집. 추가할 때는 올려 둔 파일과 '그때의 생각'이 첫 기록이 되고,
- * 저장하면 그 항성계로 이동해 새 행성이 나타나는 장면으로 이어진다.
+ * 저장하면 그 성단으로 이동해 새 작품이 나타나는 장면으로 이어진다.
  */
 export function ProjectForm({ projectId, categoryId, onClose }: ProjectFormProps) {
   const nav = useArchiveNav()
   const storedCategories = useArchiveStore((state) => state.categories)
-  // 은하에 놓인 순서(만든 순서)대로 고르게 한다
+  // 공간에 놓인 순서(만든 순서)대로 고르게 한다
   const categories = useMemo(
     () => [...storedCategories].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     [storedCategories],
@@ -69,7 +69,7 @@ export function ProjectForm({ projectId, categoryId, onClose }: ProjectFormProps
 
       let targetCategory = category
       if (category === NEW_CATEGORY) {
-        if (!newName.trim()) return '새 항성계의 이름을 적어 주세요.'
+        if (!newName.trim()) return '새 성단의 이름을 적어 주세요.'
         targetCategory = (await store.saveCategory({ name: newName.trim(), description: '', hue: newHue })).id
         setCategory(targetCategory)
       }
@@ -112,7 +112,7 @@ export function ProjectForm({ projectId, categoryId, onClose }: ProjectFormProps
       onCancel={onClose}
       busy={busy}
       error={error}
-      submitLabel={project ? '저장' : '은하에 추가'}
+      submitLabel={project ? '저장' : '공간에 추가'}
       aside={
         project && (
           <ConfirmButton
@@ -145,7 +145,7 @@ export function ProjectForm({ projectId, categoryId, onClose }: ProjectFormProps
       </Field>
 
       <FieldRow>
-        <Field label="항성계" htmlFor="project-category">
+        <Field label="성단" htmlFor="project-category">
           <select
             id="project-category"
             className="input"
@@ -157,7 +157,7 @@ export function ProjectForm({ projectId, categoryId, onClose }: ProjectFormProps
                 {item.name}
               </option>
             ))}
-            <option value={NEW_CATEGORY}>새 항성계 만들기…</option>
+            <option value={NEW_CATEGORY}>새 성단 만들기…</option>
           </select>
         </Field>
         <Field label="시작한 날" htmlFor="project-date">
@@ -174,7 +174,7 @@ export function ProjectForm({ projectId, categoryId, onClose }: ProjectFormProps
 
       {category === NEW_CATEGORY && (
         <div className="form-shell__group">
-          <Field label="새 항성계 이름" htmlFor="project-new-category" hint="예: Game, Music, 글">
+          <Field label="새 성단 이름" htmlFor="project-new-category" hint="예: Game, Music, 글">
             <input
               id="project-new-category"
               className="input"
@@ -182,7 +182,7 @@ export function ProjectForm({ projectId, categoryId, onClose }: ProjectFormProps
               onChange={(event) => setNewName(event.target.value)}
             />
           </Field>
-          <Field label="항성의 색" htmlFor="project-new-hue">
+          <Field label="성단의 색" htmlFor="project-new-hue">
             <HuePicker id="project-new-hue" value={newHue} onChange={setNewHue} />
           </Field>
         </div>

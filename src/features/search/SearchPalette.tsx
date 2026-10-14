@@ -47,7 +47,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
       {
         key: 'category',
         group: '동작',
-        title: '항성계 추가',
+        title: '성단 추가',
         context: '새 카테고리를 만듭니다',
         icon: Orbit,
         run: then(() => openDialog({ type: 'category' })),
@@ -83,7 +83,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
 
     const found = searchArchive(needle, categories, projects, LIMITS.searchResults).map<PaletteItem>((result) => ({
       key: `${result.type}-${result.id}`,
-      group: result.type === 'category' ? '항성계' : '창작물',
+      group: result.type === 'category' ? '성단' : '창작물',
       title: result.title,
       context: result.context,
       hue: result.hue,
@@ -118,7 +118,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
           role="combobox"
           aria-expanded="true"
           aria-controls="palette-results"
-          aria-label="창작물 · 항성계 · 메모 검색"
+          aria-label="창작물 · 성단 · 메모 검색"
           placeholder="창작물, 태그, 그때의 메모 검색"
           value={query}
           data-autofocus

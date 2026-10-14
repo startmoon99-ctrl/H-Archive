@@ -1,0 +1,56 @@
+.space {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-galaxy);
+  /* hidden이 아니라 clip: 화면 밖의 요소에 초점이 가도 브라우저가 이 영역을 스크롤하지 못하게 한다 */
+  overflow: clip;
+  background: radial-gradient(ellipse 130% 100% at 50% 44%, var(--color-space) 0%, var(--color-void) 72%);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.space[data-dragging='true'] {
+  cursor: grabbing;
+}
+
+.space__canvas,
+.space__layer {
+  position: absolute;
+  inset: 0;
+  transition:
+    opacity var(--dur-slow) var(--ease-standard),
+    scale var(--dur-slow) var(--ease-cinematic);
+}
+
+.space__canvas {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* 인트로가 끝나기 전에는 성단을 감춘다(입자는 카메라가 다가오는 동안 먼저 보인다) */
+.space[data-intro='playing'] .space__layer {
+  opacity: 0;
+}
+
+.space[data-intro='revealing'] .space__layer {
+  transition-duration: var(--dur-cinematic);
+}
+
+/* 파일을 끌어오면 공간이 한발 물러나 자리를 내준다 */
+.space[data-receiving='true'] :is(.space__canvas, .space__layer) {
+  opacity: 0.3;
+  scale: 0.92;
+}
+
+/* 상세 화면 뒤에는 입자만 옅게 비친다. 성단 · 작품은 물러나며 사라지고, 돌아오면 다시 떠오른다 */
+.space[data-view='project'] .space__layer {
+  opacity: 0;
+}
+
+/* 프로젝트 화면에 완전히 가려지면 그리지 않는다 */
+.space[data-covered='true'] .space__layer {
+  visibility: hidden;
+}

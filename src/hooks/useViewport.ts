@@ -13,7 +13,7 @@ export interface Viewport {
   touchUi: boolean
   /**
    * 화면 배율(1 = 기준). QHD · 4K처럼 넓은 화면에서 커진다.
-   * px로 계산하는 값(행성 크기, 고정 UI 높이, 별의 크기)에 곱해 CSS의 rem과 맞춘다.
+   * px로 계산하는 값(작품 크기, 고정 UI 높이, 별의 크기)에 곱해 CSS의 rem과 맞춘다.
    */
   scale: number
 }

@@ -75,7 +75,7 @@ video {
 }
 
 ::selection {
-  background: rgb(124 92 245 / 0.45);
+  background: rgb(var(--glow-rgb) / 0.45);
 }
 
 .visually-hidden {
@@ -87,7 +87,7 @@ video {
   white-space: nowrap;
 }
 
-/* 작은 대문자 라벨. 은하의 영문 표기에 공통으로 쓴다. */
+/* 작은 대문자 라벨. 공간의 영문 표기에 공통으로 쓴다. */
 .eyebrow {
   font-size: var(--text-xs);
   letter-spacing: var(--tracking-wide);

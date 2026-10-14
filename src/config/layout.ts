@@ -13,7 +13,7 @@ export function layoutForWidth(width: number): LayoutId {
 }
 
 /**
- * 화면 위에 고정되는 UI의 크기(px). 은하 카메라가 가려지지 않는 영역을 계산할 때도 쓰므로
+ * 화면 위에 고정되는 UI의 크기(px). 공간 카메라가 가려지지 않는 영역을 계산할 때도 쓰므로
  * CSS에 다시 적지 않고 injectTokens가 --hud-height 등으로 주입한다.
  */
 export const CHROME = {

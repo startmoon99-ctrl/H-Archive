@@ -11,11 +11,13 @@ import {
 import type { Category, ID, Project } from '@/types/archive'
 
 interface ArchiveState {
-  status: 'loading' | 'ready' | 'error'
+  /** idle → loading → ready, 실패하면 error. error에서 init을 다시 부르면 처음부터 다시 불러온다. */
+  status: 'idle' | 'loading' | 'ready' | 'error'
   error: string | null
   categories: Category[]
   projects: Project[]
 
+  /** 기록을 불러온다. 이미 불러왔거나 불러오는 중이면 새로 시작하지 않는다. */
   init: () => Promise<void>
   saveCategory: (draft: CategoryDraft, id?: ID) => Promise<Category>
   deleteCategory: (id: ID) => Promise<void>
@@ -41,28 +43,35 @@ export const useArchiveStore = create<ArchiveState>((set, get) => {
     return project
   }
 
-  let started = false
+  /** 진행 중인 불러오기. 겹친 호출(StrictMode의 이중 호출 포함)은 새로 시작하지 않고 이것을 함께 기다린다. */
+  let loading: Promise<void> | null = null
+
+  const load = async () => {
+    set({ status: 'loading', error: null })
+    try {
+      const snapshot = await archiveService.load()
+      set({ ...snapshot, status: 'ready', error: null })
+      // Preview 생성처럼 백그라운드에서 바뀐 프로젝트를 반영한다
+      archiveService.subscribe((project) => {
+        if (get().projects.some((item) => item.id === project.id)) putProject(project)
+      })
+    } catch (error) {
+      set({ status: 'error', error: error instanceof Error ? error.message : '불러오지 못했습니다.' })
+    }
+  }
 
   return {
-    status: 'loading',
+    status: 'idle',
     error: null,
     categories: [],
     projects: [],
 
-    async init() {
-      // StrictMode의 이중 호출에도 한 번만 불러온다
-      if (started) return
-      started = true
-      try {
-        const snapshot = await archiveService.load()
-        set({ ...snapshot, status: 'ready', error: null })
-        // Preview 생성처럼 백그라운드에서 바뀐 프로젝트를 반영한다
-        archiveService.subscribe((project) => {
-          if (get().projects.some((item) => item.id === project.id)) putProject(project)
-        })
-      } catch (error) {
-        set({ status: 'error', error: error instanceof Error ? error.message : '불러오지 못했습니다.' })
-      }
+    init() {
+      if (get().status === 'ready') return Promise.resolve()
+      loading ??= load().finally(() => {
+        loading = null
+      })
+      return loading
     },
 
     async saveCategory(draft, id) {

@@ -1,0 +1,90 @@
+/*
+ * 성단의 구조(위치 · 크기 · 누르는 영역). 어떻게 빛나고 반응하는지는 effects/cluster-effects.css에 있다.
+ * 요소는 화면 좌표의 한 점에 놓이고(transform은 scene/sceneUpdater가 쓴다),
+ * --s(world → px 배율)와 --r(성단 반지름)로 크기를 정한다.
+ */
+.cluster {
+  --s: 1;
+  --near: 0;
+  --sense: 0;
+  --lean-x: 0;
+  --lean-y: 0;
+  --breath: 0;
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+/* 전체 보기에서는 성단 전체가 누르는 영역이 된다 */
+.cluster__hit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max(var(--tap-target), calc(var(--r) * var(--s) * 1.5px));
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% -50%;
+  outline-offset: 0;
+}
+
+.cluster[data-state='focused'] .cluster__hit {
+  pointer-events: none;
+}
+
+.cluster__halo,
+.cluster__ring,
+.cluster__core {
+  position: absolute;
+  left: 0;
+  top: 0;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% -50%;
+  pointer-events: none;
+}
+
+.cluster__halo {
+  width: calc(var(--r) * var(--s) * 2.6px);
+}
+
+.cluster__core {
+  width: 0.3rem;
+}
+
+.cluster__ring {
+  width: calc(1.5rem + var(--near) * 1.1rem);
+}
+
+.cluster__label {
+  position: absolute;
+  left: 0;
+  top: calc(1.9rem + var(--near) * 0.4rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.cluster__name {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-display);
+  letter-spacing: var(--tracking-display);
+  /* 마지막 글자 뒤의 자간만큼 가운데가 밀리지 않게 한다 */
+  margin-right: calc(var(--tracking-display) * -1);
+  text-transform: uppercase;
+}
+
+.cluster__count {
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-wide);
+  margin-right: calc(var(--tracking-wide) * -1);
+  text-transform: uppercase;
+}

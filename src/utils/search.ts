@@ -59,7 +59,7 @@ export function searchArchive(rawQuery: string, categories: Category[], projects
       type: 'category',
       id: category.id,
       title: category.name,
-      context: category.description || '항성계',
+      context: category.description || '성단',
       hue: category.hue,
     }))
 

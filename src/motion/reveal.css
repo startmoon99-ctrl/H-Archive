@@ -46,6 +46,13 @@
   }
 }
 
+/* 느리게 숨 쉬듯 밝기가 오르내린다. 살아 있는 빛에 공통으로 쓴다. */
+@keyframes breathe {
+  50% {
+    opacity: 0.6;
+  }
+}
+
 /* 움직임 최소화: 마스크로 가리지 않고 투명도만 바꾼다 */
 :root[data-motion='minimal'] .reveal[data-variant='mask'] {
   clip-path: none;

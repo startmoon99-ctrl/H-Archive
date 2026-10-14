@@ -22,4 +22,6 @@ export interface Toast {
   id: ID
   message: string
   tone: 'info' | 'warning'
+  /** 있으면 알림을 누를 때 실행한다. 이런 알림은 누를 때까지 사라지지 않는다. */
+  action?: () => void
 }

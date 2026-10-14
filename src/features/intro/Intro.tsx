@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { STORAGE_KEYS } from '@/config/app'
-import { INTRO_LETTER_SPREAD, introSequences, type IntroMode, type IntroStep } from '@/config/intro'
-import { getMotion } from '@/motion/runtime'
+import { INTRO_LETTER_SPREAD, introSequence as sequence, type IntroStep } from '@/config/intro'
 import { useUiStore } from '@/store/uiStore'
 import { cssVars } from '@/utils/css'
 import './intro.css'
@@ -9,45 +7,39 @@ import './intro.css'
 type Stage = 'in' | 'hold' | 'out'
 const NEXT_STAGE: Record<Stage, Stage | null> = { in: 'hold', hold: 'out', out: null }
 
-/** 처음이면 전체 인트로, 다시 온 방문이거나 움직임을 줄였다면 짧은 인트로 */
-function chooseMode(replayed: boolean): IntroMode {
-  if (replayed) return 'full'
-  if (getMotion().intensity === 0) return 'quick'
-  return localStorage.getItem(STORAGE_KEYS.introSeen) ? 'quick' : 'full'
-}
-
 function IntroLine({ step, stage }: { step: IntroStep; stage: Stage }) {
   const letters = [...step.text]
   const letterDelay = (step.in * INTRO_LETTER_SPREAD) / letters.length
   return (
-    <p
-      className="intro__line"
+    <div
+      className="intro__title"
       data-stage={stage}
-      aria-label={step.text}
       style={cssVars({ in: `${step.in}ms`, out: `${step.out}ms`, 'letter-delay': `${letterDelay}ms` })}
     >
-      {letters.map((letter, index) => (
-        <span key={index} className="intro__letter" aria-hidden="true" style={cssVars({ i: index })}>
-          {letter === ' ' ? ' ' : letter}
-        </span>
-      ))}
-    </p>
+      <p className="intro__line" aria-label={step.text}>
+        {letters.map((letter, index) => (
+          <span key={index} className="intro__letter" aria-hidden="true" style={cssVars({ i: index })}>
+            {letter.trim()}
+          </span>
+        ))}
+      </p>
+      <span className="intro__rule" aria-hidden="true" />
+    </div>
   )
 }
 
-/** 인트로 한 번의 재생. 다시 보기를 하면 key가 바뀌어 새로 만들어진다. */
-function IntroRun({ mode }: { mode: IntroMode }) {
+/** 인트로 한 번의 재생. 다시 보기를 하면 key가 바뀌어 처음부터 새로 만들어진다. */
+function IntroRun() {
   const phase = useUiStore((state) => state.introPhase)
   const startReveal = useUiStore((state) => state.startReveal)
   const finishIntro = useUiStore((state) => state.finishIntro)
-  const sequence = introSequences[mode]
   const [started, setStarted] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
   const [stage, setStage] = useState<Stage>('in')
   const step = sequence.steps[stepIndex]
 
   const skip = useCallback(() => {
-    if (useUiStore.getState().introPhase === 'playing') startReveal(introSequences.quick.revealMs)
+    if (useUiStore.getState().introPhase === 'playing') startReveal(sequence.skipRevealMs)
   }, [startReveal])
 
   // 글자 순서를 진행한다
@@ -71,16 +63,13 @@ function IntroRun({ mode }: { mode: IntroMode }) {
       }
     }, step[stage])
     return () => window.clearTimeout(timer)
-  }, [phase, started, step, stage, sequence, startReveal])
+  }, [phase, started, step, stage, startReveal])
 
-  // 카메라가 은하에 다다르면 인트로를 끝낸다
+  // 카메라가 공간에 다다르면 인트로를 끝낸다
   const revealMs = useUiStore((state) => state.introRevealMs)
   useEffect(() => {
     if (phase !== 'revealing') return
-    const timer = window.setTimeout(() => {
-      localStorage.setItem(STORAGE_KEYS.introSeen, '1')
-      finishIntro()
-    }, revealMs)
+    const timer = window.setTimeout(finishIntro, revealMs)
     return () => window.clearTimeout(timer)
   }, [phase, revealMs, finishIntro])
 
@@ -94,7 +83,7 @@ function IntroRun({ mode }: { mode: IntroMode }) {
     <div className="intro" data-phase={phase} style={cssVars({ reveal: `${revealMs}ms` })} onClick={skip}>
       <div className="intro__light" aria-hidden="true" />
       {started && step && phase === 'playing' && <IntroLine key={step.id} step={step} stage={stage} />}
-      {phase === 'playing' && mode === 'full' && (
+      {phase === 'playing' && (
         <button type="button" className="intro__skip eyebrow" onClick={skip}>
           Skip
         </button>
@@ -103,10 +92,13 @@ function IntroRun({ mode }: { mode: IntroMode }) {
   )
 }
 
-/** 시네마틱 인트로: 검은 화면 → H ARCHIVE → MY CREATIVE HISTORY → 은하로 진입 */
+/**
+ * 시네마틱 인트로: 검은 화면 → H ARCHIVE → MY CREATIVE HISTORY → 공간으로 진입.
+ * 접속할 때와 다시 보기가 같은 인트로(config/intro.ts의 introSequence)를 처음부터 재생한다.
+ */
 export function Intro() {
   const phase = useUiStore((state) => state.introPhase)
   const run = useUiStore((state) => state.introRun)
   if (phase === 'done') return null
-  return <IntroRun key={run} mode={chooseMode(run > 0)} />
+  return <IntroRun key={run} />
 }

@@ -6,7 +6,7 @@ export type ID = string
 export type ISODate = string
 export type ISODateTime = string
 
-/** 항성계 */
+/** 성단 */
 export interface Category {
   id: ID
   name: string
@@ -36,7 +36,7 @@ export interface MediaAsset {
   duration?: number
   /** 원본. 상세 화면에서 직접 열 때만 불러온다. */
   original?: MediaSource
-  /** 은하와 카드용의 작은 이미지 */
+  /** 공간과 카드용의 작은 이미지 */
   thumbnail?: MediaSource
   /** 상세 화면 · 갤러리용의 고해상도 이미지. 없으면 썸네일을 쓴다. */
   display?: MediaSource

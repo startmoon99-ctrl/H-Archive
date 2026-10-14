@@ -80,14 +80,14 @@
   color: var(--color-text-dim);
 }
 
-/* 창작물과 항성계는 그 항성의 색을 띤 작은 별로 표시한다 */
+/* 창작물과 성단은 그 성단의 색을 띤 작은 빛으로 표시한다 */
 .palette__mark[data-kind='star']::before {
   content: '';
   width: 0.625rem;
   height: 0.625rem;
   border-radius: 50%;
-  background: oklch(0.8 0.14 var(--hue, 280));
-  box-shadow: 0 0 10px oklch(0.7 0.18 var(--hue, 280) / var(--m-glow));
+  background: oklch(0.8 var(--chroma-tint) var(--hue, 280));
+  box-shadow: 0 0 10px oklch(0.7 var(--chroma-tint) var(--hue, 280) / var(--m-glow));
 }
 
 .palette__mark svg {

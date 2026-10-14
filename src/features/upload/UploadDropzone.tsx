@@ -60,8 +60,8 @@ function useFileDrop(): void {
 }
 
 /**
- * Drag & Drop의 받는 쪽. 파일을 끌어오면 은하가 물러나고(galaxy.css) 가운데에 Drop Zone이 열린다.
- * 놓은 뒤의 입력 → 저장 → 새 행성의 등장은 추가 폼과 은하가 이어받는다.
+ * Drag & Drop의 받는 쪽. 파일을 끌어오면 공간이 물러나고(space.css) 가운데에 Drop Zone이 열린다.
+ * 놓은 뒤의 입력 → 저장 → 새 작품의 등장은 추가 폼과 공간이 이어받는다.
  */
 export function UploadDropzone() {
   useFileDrop()
@@ -78,7 +78,7 @@ export function UploadDropzone() {
         <span className="dropzone__ring" />
         <Upload className="dropzone__icon" />
       </div>
-      <p className="dropzone__title">{view === 'project' ? '여기에 놓아 새 기록으로' : '여기에 놓아 은하에 더하기'}</p>
+      <p className="dropzone__title">{view === 'project' ? '여기에 놓아 새 기록으로' : '여기에 놓아 공간에 더하기'}</p>
       <p className="eyebrow">Drop to archive</p>
     </div>
   )

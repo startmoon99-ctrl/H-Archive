@@ -10,12 +10,12 @@ import { FormShell } from './FormShell'
 import { useSubmit } from './useSubmit'
 
 interface CategoryFormProps {
-  /** 있으면 편집, 없으면 새 항성계 */
+  /** 있으면 편집, 없으면 새 성단 */
   categoryId?: ID
   onClose: () => void
 }
 
-/** 항성계(카테고리) 추가 · 편집. 창작물이 남아 있는 항성계는 지울 수 없다. */
+/** 성단(카테고리) 추가 · 편집. 창작물이 남아 있는 성단은 지울 수 없다. */
 export function CategoryForm({ categoryId, onClose }: CategoryFormProps) {
   const nav = useArchiveNav()
   const category = useArchiveStore((state) => state.categories.find((item) => item.id === categoryId))
@@ -50,11 +50,11 @@ export function CategoryForm({ categoryId, onClose }: CategoryFormProps) {
       onCancel={onClose}
       busy={busy}
       error={error}
-      submitLabel={category ? '저장' : '항성계 만들기'}
+      submitLabel={category ? '저장' : '성단 만들기'}
       aside={
         category && (
           <ConfirmButton
-            label={isEmpty ? '항성계 지우기' : '창작물이 있어 지울 수 없음'}
+            label={isEmpty ? '성단 지우기' : '창작물이 있어 지울 수 없음'}
             confirmLabel="한 번 더 누르면 지워집니다"
             onConfirm={remove}
             disabled={!isEmpty || busy !== null}
@@ -79,7 +79,7 @@ export function CategoryForm({ categoryId, onClose }: CategoryFormProps) {
           onChange={(event) => setDescription(event.target.value)}
         />
       </Field>
-      <Field label="항성의 색" htmlFor="category-hue">
+      <Field label="성단의 색" htmlFor="category-hue">
         <HuePicker id="category-hue" value={hue} onChange={setHue} />
       </Field>
     </FormShell>

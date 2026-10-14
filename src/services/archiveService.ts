@@ -1,3 +1,4 @@
+import { REMOTE } from '@/config/app'
 import { FIRST_ENTRY_TITLE, type ProjectStatusId } from '@/config/catalog'
 import { detectMediaKind, type MediaKind } from '@/config/media'
 import type {
@@ -204,10 +205,11 @@ async function commit(project: Project, jobs: PreviewJob[] = []): Promise<Projec
 export const archiveService = {
   async load(): Promise<ArchiveSnapshot> {
     const snapshot = await repository.load()
-    // 지난번에 끝내지 못한 Preview 생성을 이어서 한다
+    // 지난번에 끝내지 못한 Preview 생성을 이어서 한다. 원본을 다시 읽어야 하므로 큰 파일은 건너뛴다.
     for (const project of snapshot.projects) {
       for (const asset of allMedia(project)) {
-        if (asset.previewPending && asset.original?.type === 'stored') {
+        const resumable = asset.original?.type === 'stored' && asset.size <= REMOTE.previewResumeMaxBytes
+        if (asset.previewPending && resumable) {
           enqueuePreview({ projectId: project.id, assetId: asset.id })
         }
       }

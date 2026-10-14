@@ -24,7 +24,7 @@ interface MediaPreviewProps {
    */
   active?: boolean
   /**
-   * 정지 이미지의 해상도. thumbnail: 은하 · 카드용(기본) / display: 상세 화면처럼 크게 보이는 곳.
+   * 정지 이미지의 해상도. thumbnail: 공간 · 카드용(기본) / display: 상세 화면처럼 크게 보이는 곳.
    * display가 없는 자료는 썸네일로 대신한다.
    */
   detail?: 'thumbnail' | 'display'

@@ -1,6 +1,5 @@
 import {
   DEFAULT_MOTION_PRESET,
-  galaxyMotion,
   motionPresets,
   motionTokens,
   type DurationToken,
@@ -41,7 +40,7 @@ export function applyMotion(settings: MotionSettings): void {
 
   set('--m-intensity', settings.intensity)
   set('--m-glow', settings.glow)
-  set('--m-ambient-rate', Math.max(settings.background, galaxyMotion.minAmbientRate))
+  set('--m-ambient-rate', Math.max(settings.background, motionTokens.minAmbientRate))
   set('--ambient-play', settings.background > 0 ? 'running' : 'paused')
 
   root.dataset.motion = settings.intensity === 0 ? 'minimal' : 'full'

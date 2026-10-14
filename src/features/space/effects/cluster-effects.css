@@ -1,0 +1,79 @@
+/*
+ * 성단의 시각 효과. 입력은 다음뿐이다:
+ *   data-state(idle · focused · dimmed) · --hue(성단의 색)
+ *   --sense(커서를 멀리서 알아차린 정도 0 ~ 1) · --near(가까이 온 정도 0 ~ 1)
+ *   --lean-x · --lean-y(커서 쪽으로 기우는 거리 px) · --breath(느린 숨 -1 ~ 1)
+ * 반응은 단계적이다: 멀리서는 빛만 조금 → 가까이 오면 이름 아래 작품 수가 펼쳐지고 중심이 커서를 본다.
+ * 이 파일을 지우거나 바꿔도 선택 · 이동 같은 동작은 그대로 남는다.
+ * (입자 무리의 숨과 반응은 같은 값으로 environment/shaders.ts가 그린다.)
+ */
+.cluster {
+  transition: opacity var(--dur-slow) var(--ease-standard);
+}
+
+.cluster[data-state='dimmed'] {
+  opacity: var(--opacity-dim);
+}
+
+/* 성단을 감싸는 아주 옅은 빛 */
+.cluster__halo {
+  background: radial-gradient(
+    circle,
+    oklch(0.84 var(--chroma-tint) var(--hue) / calc((0.09 + var(--sense) * 0.04 + var(--near) * 0.06) * var(--m-glow))) 0%,
+    oklch(0.84 var(--chroma-tint) var(--hue) / calc(0.025 * var(--m-glow))) 38%,
+    transparent 66%
+  );
+}
+
+/* 중심의 빛: 작고 또렷한 점 하나. 아주 느리게 숨 쉬고, 가까이 온 커서 쪽으로 조금 기운다 */
+.cluster .cluster__core {
+  background: var(--color-light);
+  box-shadow:
+    0 0 calc(0.5rem + var(--near) * 0.7rem + var(--breath) * 0.14rem)
+      calc(0.04rem + var(--near) * 0.12rem + var(--breath) * 0.02rem)
+      oklch(0.92 var(--chroma-tint) var(--hue) / calc((0.72 + var(--breath) * 0.1) * var(--m-glow))),
+    0 0 2.4rem 0.2rem oklch(0.8 var(--chroma-tint) var(--hue) / calc((0.16 + var(--sense) * 0.05) * var(--m-glow)));
+  translate: calc(-50% + var(--lean-x) * 1px) calc(-50% + var(--lean-y) * 1px);
+  scale: calc(1 + var(--breath) * 0.05 + var(--near) * 0.1);
+}
+
+/* 다가가면 열리는 가는 고리. 중심보다 덜 기울어 중심이 커서를 바라보는 것처럼 보인다 */
+.cluster .cluster__ring {
+  border: 1px solid rgb(var(--light-rgb) / calc(0.07 + var(--sense) * 0.05 + var(--near) * 0.26));
+  translate: calc(-50% + var(--lean-x) * 0.4px) calc(-50% + var(--lean-y) * 0.4px);
+  transition: opacity var(--dur-slow) var(--ease-standard);
+}
+
+.cluster[data-state='focused'] .cluster__ring {
+  opacity: 0;
+}
+
+/* 이름은 어둠 속에 옅게 놓여 있다가 커서가 다가오는 만큼 떠오른다 */
+.cluster__label {
+  opacity: calc(0.3 + var(--near) * 0.7);
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+.cluster__hit:focus-visible ~ .cluster__label {
+  opacity: 1;
+}
+
+.cluster:not([data-state='idle']) .cluster__label {
+  opacity: 0;
+}
+
+/* 들어가는 성단의 이름은 잠시 남았다가, 화면의 큰 이름(ui/ClusterTitle)이 떠오를 즈음 물러난다 */
+.cluster[data-state='focused'] .cluster__label {
+  transition-delay: calc(var(--dur-travel) * 0.22);
+}
+
+.cluster__name {
+  color: var(--color-text);
+}
+
+/* 작품 수는 이름 안에 접혀 있다가 커서가 가까이 오는 만큼 아래로 펼쳐진다(터치에서는 항상 보인다) */
+.cluster__count {
+  color: var(--color-text-dim);
+  opacity: var(--near);
+  translate: 0 calc((1 - var(--near)) * -0.4rem);
+}

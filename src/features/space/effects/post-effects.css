@@ -1,0 +1,30 @@
+.post,
+.post__vignette,
+.post__grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* 가장 위에서 장면 전체를 덮는다(성단 · 작품의 z-index는 깊이값이라 크다) */
+.post {
+  z-index: 2147483000;
+}
+
+.post__vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 48%,
+    rgb(var(--void-rgb) / var(--vignette-opacity)) 100%
+  );
+}
+
+/* 밝은 미세 입자를 아주 옅게 깔아 매끈한 그라데이션의 띠를 없애고 질감을 준다 */
+.post__grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.7 0 0 0 -0.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: var(--grain-opacity);
+}
+
+:root[data-grain='false'] .post__grain {
+  display: none;
+}

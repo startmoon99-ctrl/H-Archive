@@ -52,17 +52,19 @@
 
 .button[data-variant='primary'] {
   border-color: var(--color-line-strong);
-  background: linear-gradient(135deg, rgb(124 92 245 / 0.5), rgb(79 131 255 / 0.36));
-  box-shadow: var(--glow-soft) rgb(124 92 245 / calc(0.3 * var(--m-glow)));
+  background: rgb(var(--light-rgb) / 0.08);
+  box-shadow: var(--glow-soft) rgb(var(--glow-rgb) / calc(0.1 * var(--m-glow)));
 }
 
 .button[data-variant='primary']:hover:not(:disabled) {
-  box-shadow: var(--glow-strong) rgb(124 92 245 / calc(0.4 * var(--m-glow)));
+  border-color: rgb(var(--light-rgb) / 0.5);
+  background: rgb(var(--light-rgb) / 0.14);
+  box-shadow: var(--glow-strong) rgb(var(--glow-rgb) / calc(0.2 * var(--m-glow)));
 }
 
 .button[data-variant='ghost'] {
   border-color: var(--color-line);
-  background: rgb(10 13 33 / 0.6);
+  background: rgb(var(--void-rgb) / 0.6);
 }
 
 .button[data-variant='ghost']:hover:not(:disabled),

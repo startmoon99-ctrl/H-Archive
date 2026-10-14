@@ -1,3 +1,8 @@
+/*
+ * 로고 연출: 어둠 → 가는 빛의 선이 그어지고 → 그 선 위로 글자가 떠오르며 자간이 자리를 잡는다
+ * → 글자가 흩어지듯 사라지고 → 막이 걷히며 카메라가 공간 안으로 들어간다.
+ * 시간(--in · --out · --letter-delay · --reveal)은 config/intro.ts에서 온다.
+ */
 .intro {
   position: fixed;
   inset: 0;
@@ -10,52 +15,45 @@
   transition: opacity calc(var(--reveal) * 0.7) var(--ease-cinematic);
 }
 
-/* 은하가 다가오는 동안 검은 막이 걷힌다 */
+/* 카메라가 다가오는 동안 검은 막이 걷힌다 */
 .intro[data-phase='revealing'] {
   opacity: 0;
   pointer-events: none;
 }
 
-/* 어둠 속의 미세한 빛 */
+/* 어둠 속의 아주 옅은 빛 */
 .intro__light {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 130vmax;
-  height: 130vmax;
+  width: 120vmax;
+  height: 120vmax;
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgb(124 92 245 / 0.16) 0%,
-    rgb(79 131 255 / 0.06) 30%,
-    transparent 60%
-  );
+  background: radial-gradient(circle, rgb(var(--glow-rgb) / 0.07) 0%, rgb(var(--glow-rgb-2) / 0.02) 30%, transparent 58%);
   translate: -50% -50%;
   animation: intro-light 9s ease-in-out infinite alternate;
 }
 
 @keyframes intro-light {
   from {
-    opacity: 0.35;
-    transform: translate(-3%, 2%) scale(0.9);
+    opacity: 0.3;
+    transform: translate(-2%, 1.5%) scale(0.92);
   }
 
   to {
     opacity: 1;
-    transform: translate(3%, -2%) scale(1.08);
+    transform: translate(2%, -1.5%) scale(1.06);
   }
 }
 
-.intro__line {
+.intro__title {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.15rem;
+  max-width: 100%;
   padding: 0 var(--space-5);
-  font-family: var(--font-display);
-  font-size: var(--text-display);
-  font-weight: 300;
-  line-height: 1.2;
-  letter-spacing: var(--tracking-display);
-  text-align: center;
-  color: var(--color-text);
   transition:
     opacity var(--out) var(--ease-standard),
     transform var(--out) var(--ease-exit),
@@ -63,24 +61,66 @@
 }
 
 /* 사라질 때는 카메라가 글자를 지나쳐 가듯 */
-.intro__line[data-stage='out'] {
+.intro__title[data-stage='out'] {
   opacity: 0;
-  transform: scale(1.12);
-  filter: blur(14px);
+  transform: scale(1.08);
+  filter: blur(0.75rem);
+}
+
+/* 글자는 간격(gap)으로 벌려 정확히 가운데에 놓고, 그 간격이 넓은 데서 좁혀지며 자리를 잡는다 */
+.intro__line {
+  display: flex;
+  justify-content: center;
+  gap: var(--tracking-display);
+  /* 아래에서 떠오르는 글자를 선 아래에서 가린다 */
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: var(--weight-display);
+  line-height: 1.15;
+  color: var(--color-text);
+  animation: intro-settle var(--in) var(--ease-cinematic) both;
+}
+
+@keyframes intro-settle {
+  from {
+    gap: calc(var(--tracking-display) * 1.9);
+  }
 }
 
 .intro__letter {
-  display: inline-block;
-  animation: intro-letter var(--in) var(--ease-enter) both;
-  animation-delay: calc(var(--i) * var(--letter-delay));
+  display: block;
+  min-width: 0.3em;
+  animation: intro-letter calc(var(--in) * 0.7) var(--ease-enter) both;
+  animation-delay: calc(var(--in) * 0.22 + var(--i) * var(--letter-delay));
 }
 
 @keyframes intro-letter {
   from {
     opacity: 0;
-    transform: translateY(0.25em) scale(1.08);
-    filter: blur(16px);
+    transform: translateY(105%);
   }
+}
+
+/* 글자가 올라서는 가는 빛의 선 */
+.intro__rule {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgb(var(--light-rgb) / 0.75) 20%, rgb(var(--light-rgb) / 0.75) 80%, transparent);
+  animation: intro-rule calc(var(--in) * 0.75) var(--ease-cinematic) both;
+}
+
+@keyframes intro-rule {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+}
+
+.intro__title[data-stage='out'] .intro__rule {
+  transform: scaleX(0);
+  transition: transform var(--out) var(--ease-cinematic);
 }
 
 .intro__skip {
@@ -104,6 +144,9 @@
   }
 }
 
+/* 좁은 화면: 글자 간격을 줄여 한 줄에 담는다 */
 :root[data-layout='mobile'] .intro__line {
-  --tracking-display: 0.2em;
+  --tracking-display: 0.22em;
+
+  font-size: clamp(1.5rem, 7.4vw, 2.4rem);
 }

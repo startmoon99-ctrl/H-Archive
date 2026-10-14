@@ -35,8 +35,8 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, oklch(0.7 0.18 var(--hue)), oklch(0.85 0.1 var(--hue)));
-  box-shadow: var(--glow-soft) oklch(0.7 0.18 var(--hue) / calc(0.8 * var(--m-glow)));
+  background: linear-gradient(to bottom, oklch(0.7 var(--chroma-tint) var(--hue)), oklch(0.85 var(--chroma-tint) var(--hue)));
+  box-shadow: var(--glow-soft) oklch(0.7 var(--chroma-tint) var(--hue) / calc(0.8 * var(--m-glow)));
   transform: scaleY(var(--scroll, 0));
   transform-origin: top;
 }
@@ -60,18 +60,18 @@
   top: 6px;
   width: var(--node);
   height: var(--node);
-  border: 1px solid oklch(0.8 0.12 var(--hue));
+  border: 1px solid oklch(0.8 var(--chroma-tint) var(--hue));
   border-radius: 50%;
   background: var(--color-space);
   box-shadow: 0 0 0 4px var(--color-space);
 }
 
 .entry__node[data-now] {
-  background: oklch(0.85 0.12 var(--hue));
+  background: oklch(0.85 var(--chroma-tint) var(--hue));
   box-shadow:
     0 0 0 4px var(--color-space),
-    var(--glow-soft) oklch(0.7 0.18 var(--hue) / var(--m-glow));
-  animation: star-breathe calc(4s / var(--m-ambient-rate)) ease-in-out infinite;
+    var(--glow-soft) oklch(0.7 var(--chroma-tint) var(--hue) / var(--m-glow));
+  animation: breathe calc(4s / var(--m-ambient-rate)) ease-in-out infinite;
   animation-play-state: var(--ambient-play);
 }
 
@@ -110,10 +110,10 @@
 
 .entry__version {
   padding: 2px var(--space-3);
-  border: 1px solid oklch(0.75 0.14 var(--hue) / 0.5);
+  border: 1px solid oklch(0.75 var(--chroma-tint) var(--hue) / 0.5);
   border-radius: var(--radius-pill);
   font-size: var(--text-xs);
-  color: oklch(0.85 0.1 var(--hue));
+  color: oklch(0.85 var(--chroma-tint) var(--hue));
 }
 
 .entry__edit {
@@ -132,7 +132,7 @@
 .entry__memo {
   position: relative;
   padding: var(--space-2) 0 var(--space-2) var(--space-5);
-  border-left: 1px solid oklch(0.75 0.14 var(--hue) / 0.5);
+  border-left: 1px solid oklch(0.75 var(--chroma-tint) var(--hue) / 0.5);
   font-family: var(--font-memo);
   font-size: var(--text-lg);
   font-weight: 300;

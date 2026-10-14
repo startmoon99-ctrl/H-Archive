@@ -29,7 +29,8 @@
   min-height: var(--tap-target);
   padding: 0 var(--space-2);
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-sm);
+  font-weight: 300;
   letter-spacing: var(--tracking-display);
   color: var(--color-text-dim);
   transition:
@@ -39,7 +40,7 @@
 
 .hud__brand:hover {
   color: var(--color-text);
-  text-shadow: var(--glow-soft) rgb(169 155 255 / calc(0.7 * var(--m-glow)));
+  text-shadow: var(--glow-soft) rgb(var(--light-rgb) / calc(0.7 * var(--m-glow)));
 }
 
 /* PC: 오른쪽 위 */
@@ -65,7 +66,7 @@
   height: calc(var(--dock-height) + var(--safe-bottom));
   padding: 0 var(--space-4) var(--safe-bottom);
   border-top: 1px solid var(--color-line);
-  background: rgb(3 4 10 / 0.95);
+  background: rgb(var(--void-rgb) / 0.95);
 }
 
 .hud__dock-item {
@@ -101,7 +102,7 @@
   padding: var(--space-2);
   border: 1px solid var(--color-line-strong);
   border-radius: 50%;
-  background: linear-gradient(135deg, rgb(124 92 245 / 0.5), rgb(79 131 255 / 0.36));
+  background: rgb(var(--light-rgb) / 0.1);
 }
 
 .hud__dock-item[data-primary='true'] span {

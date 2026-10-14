@@ -20,7 +20,7 @@
   color: var(--color-danger);
 }
 
-/* 새 항성계를 만드는 입력 묶음 */
+/* 새 성단을 만드는 입력 묶음 */
 .form-shell__group {
   display: flex;
   flex-direction: column;

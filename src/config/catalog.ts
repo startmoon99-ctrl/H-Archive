@@ -1,4 +1,4 @@
-/** 항성(카테고리) 색. hue 값만 저장하므로 목록에 없는 색도 쓸 수 있다. */
+/** 성단(카테고리) 색. hue 값만 저장하므로 목록에 없는 색도 쓸 수 있다. */
 export const STAR_HUES = [
   { id: 'violet', label: 'Violet', hue: 285 },
   { id: 'blue', label: 'Blue', hue: 255 },
@@ -12,7 +12,7 @@ export const STAR_HUES = [
 
 export const DEFAULT_STAR_HUE = STAR_HUES[0].hue
 
-/** 같은 항성계 안에서 프로젝트 색이 항성 색에서 벗어나는 최대 폭 */
+/** 같은 성단 안에서 프로젝트 색이 성단 색에서 벗어나는 최대 폭 */
 export const PROJECT_HUE_SPREAD = 28
 
 export const PROJECT_STATUSES = [

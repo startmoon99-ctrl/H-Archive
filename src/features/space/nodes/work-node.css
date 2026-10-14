@@ -1,0 +1,158 @@
+/*
+ * 작품의 구조(위치 · 크기 · 누르는 영역). 빛 · 확대 · 등장 같은 반응은 effects/node-effects.css에 있다.
+ * --w / --h는 프레임의 world 크기, --dx / --dy는 성단 중심에서 떨어진 거리(world),
+ * --s는 world → px 배율이다(scene/sceneUpdater가 쓴다).
+ */
+.node {
+  --s: 1;
+  --near: 0;
+  --fade: 1;
+  --frame-w: calc(var(--w) * var(--s) * 1px);
+  --frame-h: calc(var(--h) * var(--s) * 1px);
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.node__hit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--frame-w);
+  height: var(--frame-h);
+  border-radius: var(--radius-sm);
+  translate: -50% -50%;
+  pointer-events: none;
+}
+
+/*
+ * 성단에 들어가는 동안, 프레임이 펼쳐지기 전에는 눌리지 않는다.
+ * (아직 멀어서 한 점에 모여 있을 때 커서에 걸려 설명이 떴다 사라지는 것을 막는다)
+ */
+.node[data-state='open'] .node__hit {
+  pointer-events: auto;
+  animation: node-wake calc(var(--dur-travel) * 0.4) step-end backwards;
+}
+
+@keyframes node-wake {
+  from {
+    pointer-events: none;
+  }
+}
+
+/* 프레임이 작아도 터치 영역은 44px 이상을 유지한다 */
+.node__hit::before {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc((var(--frame-h) - var(--tap-target)) / 2)) min(0px, calc((var(--frame-w) - var(--tap-target)) / 2));
+}
+
+.node__point {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.19rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% -50%;
+}
+
+.node__frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.node__frame .media-preview {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+
+/* 이미지가 없는 작품: 제목의 첫 글자 */
+.node__mono {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: calc(var(--frame-h) * 0.42);
+  font-weight: var(--weight-display);
+}
+
+.node__label {
+  position: absolute;
+  left: 0;
+  top: calc(var(--frame-h) / 2 + var(--space-3));
+  max-width: 11rem;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+/* 옆에 뜨는 설명 */
+.node__caption {
+  --offset: calc(var(--frame-w) / 2 + var(--space-6));
+
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: var(--caption-width);
+  pointer-events: none;
+}
+
+.node__caption[data-side='right'] {
+  left: var(--offset);
+}
+
+.node__caption[data-side='left'] {
+  right: var(--offset);
+  align-items: flex-end;
+  text-align: right;
+}
+
+.node__caption[data-align='start'] {
+  translate: 0 calc(var(--frame-h) / -2);
+}
+
+.node__caption[data-align='center'] {
+  translate: 0 -50%;
+}
+
+.node__caption[data-align='end'] {
+  translate: 0 calc(-100% + var(--frame-h) / 2);
+}
+
+.node__caption-title {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: var(--leading-tight);
+  word-break: keep-all;
+}
+
+.node__caption-text {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.node__caption-meta {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+}

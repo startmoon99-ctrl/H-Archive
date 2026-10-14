@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLatest } from '@/hooks/useLatest'
+import { canLoadArchive, useSessionStore } from '@/store/sessionStore'
 import { useUiStore } from '@/store/uiStore'
 import { useArchiveNav, useArchiveRoute } from './useArchiveRoute'
 
@@ -15,8 +16,8 @@ export function useGlobalHotkeys(): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const ui = useUiStore.getState()
-      // 인트로 중의 키 입력은 Intro가 Skip으로 처리한다
-      if (ui.introPhase === 'playing') return
+      // 인트로 중의 키 입력은 Intro가 Skip으로 처리한다. 로그인 전에는 단축키를 받지 않는다.
+      if (ui.introPhase === 'playing' || !canLoadArchive(useSessionStore.getState().status)) return
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()

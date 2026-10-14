@@ -3,7 +3,7 @@ import type { ArchiveSnapshot, Category, ISODate, MediaAsset, MediaSource, Proje
 import { seededRandom } from '@/utils/random'
 
 /**
- * 첫 실행 때만 들어가는 샘플 은하. 구조와 분위기를 확인하기 위한 것이며
+ * 첫 실행 때만 들어가는 샘플 기록. 구조와 분위기를 확인하기 위한 것이며
  * 설정 → 데이터에서 한 번에 비울 수 있다. 실제 파일 대신 생성한 SVG 그림을 쓴다.
  */
 
@@ -99,12 +99,12 @@ const SEED: SeedCategory[] = [
     projects: [
       {
         title: 'H Archive',
-        description: '지금 보고 있는 이 은하',
+        description: '지금 보고 있는 이 공간',
         status: 'in-progress',
         tags: ['아카이브', 'React'],
         entries: [
           { date: '2026-10-05', title: '메모 그래프로 시작', memo: 'Obsidian처럼 연결되는 아카이브를 먼저 만들어 봤다. 기능은 됐지만 다시 들어오고 싶은 공간은 아니었다.', version: 'prototype', tech: ['React', 'd3-force'], art: true },
-          { date: '2026-10-12', title: '은하로 다시', memo: '저장소가 아니라 내가 만들어온 것들을 바라보는 공간이었으면 했다. 처음부터 다시 만들기로 했다.', version: 'v0.1', tech: ['Canvas', 'IndexedDB'], art: true },
+          { date: '2026-10-12', title: '공간으로 다시', memo: '저장소가 아니라 내가 만들어온 것들을 바라보는 공간이었으면 했다. 처음부터 다시 만들기로 했다.', version: 'v0.1', tech: ['Canvas', 'IndexedDB'], art: true },
         ],
       },
       {
@@ -182,28 +182,87 @@ const SEED: SeedCategory[] = [
   },
 ]
 
-/** hue와 seed로 만드는 추상적인 우주 그림 */
+/** 샘플 그림을 바꾸면 올린다. 이미 저장된 샘플도 다음 실행 때 새 그림으로 바뀐다(refreshSeedArt). */
+export const SEED_ART_VERSION = 2
+
+const SEED_ART_PREFIX = 'data:image/svg+xml,'
+const ART_WIDTH = 640
+const ART_HEIGHT = 400
+
+/** 그림마다 하나씩 들어가는 가는 선의 형태 */
+const ART_MARKS: ((random: () => number) => string)[] = [
+  // 화면보다 큰 원의 일부
+  (random) => {
+    const radius = 240 + random() * 220
+    return `<circle cx="${ART_WIDTH * random()}" cy="${ART_HEIGHT * (0.6 + random())}" r="${radius}" fill="none" stroke="#fff" stroke-opacity="0.3"/>`
+  },
+  // 비스듬히 지나가는 평행선
+  (random) => {
+    const offset = random() * 160
+    return Array.from({ length: 5 }, (_, line) => {
+      const x = offset + line * 34
+      return `<line x1="${x}" y1="${ART_HEIGHT}" x2="${x + 260}" y2="0" stroke="#fff" stroke-opacity="${0.26 - line * 0.04}"/>`
+    }).join('')
+  },
+  // 세로로 선 빛의 틈
+  (random) => {
+    const x = ART_WIDTH * (0.25 + random() * 0.5)
+    return `<rect x="${x}" y="0" width="1.5" height="${ART_HEIGHT}" fill="#fff" opacity="0.55"/><rect x="${x - 14}" y="0" width="30" height="${ART_HEIGHT}" fill="#fff" opacity="0.07"/>`
+  },
+  // 수평선
+  (random) => {
+    const y = ART_HEIGHT * (0.45 + random() * 0.3)
+    return `<line x1="0" y1="${y}" x2="${ART_WIDTH}" y2="${y}" stroke="#fff" stroke-opacity="0.34"/>`
+  },
+]
+
+/**
+ * hue와 seed로 만드는 추상 그림: 어둠 속에 번진 빛 두 덩이와 가는 선 하나.
+ * 같은 seed면 항상 같은 그림이 나온다.
+ */
 function seedArt(hue: number, seed: string): MediaSource {
   const random = seededRandom(seed)
   const at = (max: number) => Math.round(random() * max)
-  const stars = Array.from({ length: 26 }, () => {
-    const radius = (0.6 + random() * 1.6).toFixed(1)
-    return `<circle cx="${at(640)}" cy="${at(400)}" r="${radius}" fill="#fff" opacity="${(0.25 + random() * 0.6).toFixed(2)}"/>`
-  }).join('')
-  const planetX = 160 + at(320)
-  const planetY = 120 + at(160)
-  const planetR = 46 + at(60)
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" preserveAspectRatio="xMidYMid slice">
+  const mark = ART_MARKS[Math.floor(random() * ART_MARKS.length)](random)
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ART_WIDTH} ${ART_HEIGHT}" preserveAspectRatio="xMidYMid slice">
 <defs>
-<radialGradient id="a" cx="${20 + at(60)}%" cy="${20 + at(60)}%" r="85%"><stop offset="0" stop-color="oklch(0.42 0.16 ${hue})"/><stop offset="1" stop-color="oklch(0.1 0.05 ${hue + 30})"/></radialGradient>
-<radialGradient id="b" cx="${at(100)}%" cy="${at(100)}%" r="55%"><stop offset="0" stop-color="oklch(0.62 0.17 ${hue - 40})" stop-opacity="0.75"/><stop offset="1" stop-color="oklch(0.2 0.1 ${hue})" stop-opacity="0"/></radialGradient>
-<radialGradient id="c" cx="34%" cy="30%" r="75%"><stop offset="0" stop-color="oklch(0.9 0.08 ${hue + 20})"/><stop offset="0.5" stop-color="oklch(0.55 0.17 ${hue})"/><stop offset="1" stop-color="oklch(0.14 0.07 ${hue})"/></radialGradient>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="oklch(0.17 0.03 ${hue})"/><stop offset="1" stop-color="oklch(0.07 0.015 ${hue})"/></linearGradient>
+<linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.5" stop-color="#010204" stop-opacity="0"/><stop offset="1" stop-color="#010204" stop-opacity="0.7"/></linearGradient>
+<filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="46"/></filter>
 </defs>
-<rect width="640" height="400" fill="url(#a)"/><rect width="640" height="400" fill="url(#b)"/>${stars}
-<ellipse cx="${planetX}" cy="${planetY}" rx="${planetR * 1.9}" ry="${planetR * 0.42}" fill="none" stroke="oklch(0.85 0.08 ${hue})" stroke-opacity="0.4" stroke-width="1.5" transform="rotate(${-30 + at(60)} ${planetX} ${planetY})"/>
-<circle cx="${planetX}" cy="${planetY}" r="${planetR}" fill="url(#c)"/>
+<rect width="${ART_WIDTH}" height="${ART_HEIGHT}" fill="url(#bg)"/>
+<g filter="url(#soft)">
+<ellipse cx="${at(ART_WIDTH)}" cy="${at(ART_HEIGHT)}" rx="${150 + at(120)}" ry="${70 + at(70)}" fill="oklch(0.7 0.09 ${hue})" opacity="0.6" transform="rotate(${at(180)} ${ART_WIDTH / 2} ${ART_HEIGHT / 2})"/>
+<ellipse cx="${at(ART_WIDTH)}" cy="${at(ART_HEIGHT)}" rx="${60 + at(70)}" ry="${40 + at(50)}" fill="oklch(0.95 0.03 ${hue + 30})" opacity="0.5"/>
+</g>
+${mark}
+<rect width="${ART_WIDTH}" height="${ART_HEIGHT}" fill="url(#shade)"/>
 </svg>`
-  return { type: 'url', url: `data:image/svg+xml,${encodeURIComponent(svg)}` }
+  return { type: 'url', url: `${SEED_ART_PREFIX}${encodeURIComponent(svg)}` }
+}
+
+const SEED_MEDIA_SUFFIX = '-m'
+
+/**
+ * 저장되어 있는 샘플 프로젝트의 그림을 지금의 seedArt로 다시 그린다.
+ * 사용자가 올린 파일은 건드리지 않는다(샘플이 만든 SVG 그림만 대상이다). 바뀐 것이 없으면 null.
+ */
+export function refreshSeedArt(project: Project, hue: number): Project | null {
+  let changed = false
+  const timeline = project.timeline.map((entry) => ({
+    ...entry,
+    media: entry.media.map((asset) => {
+      const isSeedArt =
+        asset.id.endsWith(SEED_MEDIA_SUFFIX) &&
+        asset.thumbnail?.type === 'url' &&
+        asset.thumbnail.url.startsWith(SEED_ART_PREFIX)
+      if (!isSeedArt) return asset
+      changed = true
+      const art = seedArt(hue, asset.id.slice(0, -SEED_MEDIA_SUFFIX.length))
+      return { ...asset, original: art, thumbnail: art }
+    }),
+  }))
+  return changed ? { ...project, timeline } : null
 }
 
 function slug(text: string): string {
@@ -222,7 +281,7 @@ export function createSeed(): ArchiveSnapshot {
       name: seedCategory.name,
       description: seedCategory.description,
       hue: seedCategory.hue,
-      // 항성계는 만든 순서대로 나선에 놓인다
+      // 성단은 만든 순서대로 나선에 놓인다
       createdAt: new Date(Date.UTC(2024, 0, 1 + categoryIndex)).toISOString(),
     })
 
@@ -232,7 +291,7 @@ export function createSeed(): ArchiveSnapshot {
         const entryId = `${projectId}-e${entryIndex}`
         const art = entry.art ? seedArt(seedCategory.hue, entryId) : undefined
         const media: MediaAsset[] = art
-          ? [{ id: `${entryId}-m`, kind: 'image', name: `${entry.title}.svg`, mimeType: 'image/svg+xml', size: 0, original: art, thumbnail: art }]
+          ? [{ id: `${entryId}${SEED_MEDIA_SUFFIX}`, kind: 'image', name: `${entry.title}.svg`, mimeType: 'image/svg+xml', size: 0, original: art, thumbnail: art }]
           : []
         return {
           id: entryId,

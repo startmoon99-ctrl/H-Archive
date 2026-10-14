@@ -46,7 +46,7 @@
   gap: var(--space-1);
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
-  background: rgb(3 4 10 / 0.7);
+  background: rgb(var(--void-rgb) / 0.7);
   font-size: var(--text-xs);
   color: var(--color-text);
 }

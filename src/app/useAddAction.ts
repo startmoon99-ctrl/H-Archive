@@ -4,7 +4,7 @@ import { useArchiveRoute } from './useArchiveRoute'
 
 /**
  * "추가"가 뜻하는 일을 지금 위치에 맞춘다.
- * 프로젝트 안에서는 새 기록, 그 밖에서는 새 창작물(항성계 안이면 그 항성계가 선택된 채로).
+ * 프로젝트 안에서는 새 기록, 그 밖에서는 새 창작물(성단 안이면 그 성단이 선택된 채로).
  * 이미 추가 폼이 열려 있으면 파일만 그 폼에 더한다. + 버튼과 Drag & Drop이 함께 쓴다.
  */
 export function useAddAction(): (files?: File[]) => void {

@@ -11,11 +11,11 @@ import './hud.css'
 /** 뒤로 가기가 데려가는 곳 */
 const BACK_LABEL: Record<ArchiveView, string | null> = {
   galaxy: null,
-  system: '은하로',
-  project: '항성계로',
+  system: '전체 보기로',
+  project: '성단으로',
 }
 
-/** 은하 위에 떠 있는 최소한의 UI: 이름 · 뒤로 가기 · 검색 · 추가 · 설정 */
+/** 공간 위에 떠 있는 최소한의 UI: 이름 · 뒤로 가기 · 검색 · 추가 · 설정 */
 export function Hud() {
   const route = useArchiveRoute()
   const nav = useArchiveNav()
@@ -35,7 +35,7 @@ export function Hud() {
     <div className="hud" data-hidden={hidden} inert={hidden}>
       <header className="hud__bar">
         {backLabel && <IconButton icon={ArrowLeft} label={backLabel} variant="ghost" magnetic onClick={nav.back} />}
-        <button type="button" className="hud__brand" onClick={nav.toGalaxy} aria-label={`${APP.name} 은하 전체 보기`}>
+        <button type="button" className="hud__brand" onClick={nav.toGalaxy} aria-label={`${APP.name} 전체 보기`}>
           {APP.name}
         </button>
       </header>

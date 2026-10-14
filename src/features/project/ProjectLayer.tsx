@@ -1,14 +1,20 @@
+import { useCallback, useRef, useState } from 'react'
 import { useArchiveNav, useArchiveRoute } from '@/app/useArchiveRoute'
 import { Button } from '@/components/Button'
 import { useLastDefined, usePresence, type PresenceState } from '@/hooks/usePresence'
 import { useViewport } from '@/hooks/useViewport'
+import { getMotion } from '@/motion/runtime'
 import { useArchiveStore } from '@/store/archiveStore'
 import { useUiStore } from '@/store/uiStore'
 import type { ID } from '@/types/archive'
 import { cssVars } from '@/utils/css'
 import { ProjectHero } from './ProjectHero'
+import { SharedCover } from './SharedCover'
 import { Timeline } from './Timeline'
 import './project.css'
+
+/** 출발점이 없을 때 화면 가운데에서 열리는 창의 크기(화면 대비 비율) */
+const CENTER_OPENING = 0.16
 
 interface ProjectDetailProps {
   projectId: ID
@@ -17,49 +23,80 @@ interface ProjectDetailProps {
 
 function ProjectDetail({ projectId, state }: ProjectDetailProps) {
   const nav = useArchiveNav()
+  const route = useArchiveRoute()
   const viewport = useViewport()
-  const origin = useUiStore((s) => s.travelOrigin?.screen)
+  const origin = useUiStore((s) => s.travelOrigin)
+  const pageRef = useRef<HTMLElement>(null)
   const ready = useArchiveStore((s) => s.status === 'ready')
   const project = useArchiveStore((s) => s.projects.find((item) => item.id === projectId))
   const category = useArchiveStore((s) => s.categories.find((item) => item.id === project?.categoryId))
+  const from = origin ?? {
+    x: viewport.width * (0.5 - CENTER_OPENING / 2),
+    y: viewport.height * (0.5 - CENTER_OPENING / 2),
+    width: viewport.width * CENTER_OPENING,
+    height: viewport.height * CENTER_OPENING,
+  }
+
+  // 이 작품이 있는 성단으로 돌아가는 중인가. 그때는 대표 이미지가 작품의 자리로 되돌아간다.
+  const returning = route.view === 'system' && route.categoryId === project?.categoryId
+  // 여는 순간에 정한다: 누른 자리에 이미지가 있었으면 그 이미지를 이어받아 연다
+  const [openedShared] = useState(() => state === 'closed' && Boolean(origin?.src) && getMotion().intensity > 0)
+  const [coverAway, setCoverAway] = useState(openedShared)
+  const onFlying = useCallback((flying: boolean) => setCoverAway(flying), [])
 
   return (
-    <article
-      className="project"
-      data-state={state}
-      style={cssVars({
-        hue: category?.hue,
-        // 눌렀던 행성 자리에서 화면이 열린다. 검색이나 주소로 바로 왔다면 가운데에서 연다.
-        'origin-x': `${origin?.x ?? viewport.width / 2}px`,
-        'origin-y': `${origin?.y ?? viewport.height / 2}px`,
-      })}
-    >
-      <div className="project__scroll scroll-area" data-scroll-root>
-        {project && category ? (
-          <>
-            <ProjectHero project={project} category={category} />
-            <Timeline project={project} />
-          </>
-        ) : (
-          ready && (
-            <div className="project__missing">
-              <p>이 창작물을 찾을 수 없습니다.</p>
-              <Button variant="ghost" onClick={nav.toGalaxy}>
-                은하로 돌아가기
-              </Button>
-            </div>
-          )
-        )}
-      </div>
-    </article>
+    <>
+      <article
+        ref={pageRef}
+        className="project"
+        data-state={state}
+        data-travel={openedShared || (returning && getMotion().intensity > 0) ? 'shared' : 'frame'}
+        data-cover={coverAway ? 'away' : 'here'}
+        style={cssVars({
+          hue: category?.hue,
+          // frame 방식: 눌렀던 프레임의 자리에서 화면이 커지며 열린다. 검색이나 주소로 바로 왔다면 화면 가운데에서 연다.
+          'from-top': `${from.y}px`,
+          'from-left': `${from.x}px`,
+          'from-right': `${viewport.width - from.x - from.width}px`,
+          'from-bottom': `${viewport.height - from.y - from.height}px`,
+        })}
+      >
+        <div className="project__scroll scroll-area" data-scroll-root>
+          {project && category ? (
+            <>
+              <ProjectHero project={project} category={category} />
+              <Timeline project={project} />
+            </>
+          ) : (
+            ready && (
+              <div className="project__missing">
+                <p>이 창작물을 찾을 수 없습니다.</p>
+                <Button variant="ghost" onClick={nav.toGalaxy}>
+                  전체 보기로 돌아가기
+                </Button>
+              </div>
+            )
+          )}
+        </div>
+      </article>
+      <SharedCover
+        projectId={projectId}
+        state={state}
+        pageRef={pageRef}
+        origin={origin}
+        returning={returning}
+        onFlying={onFlying}
+      />
+    </>
   )
 }
 
-/** 프로젝트 상세 화면을 은하 위에 겹쳐 연다. 닫히는 동안에도 마지막 프로젝트를 보여준다. */
+/** 프로젝트 상세 화면을 공간 위에 겹쳐 연다. 닫히는 동안에도 마지막 프로젝트를 보여준다. */
 export function ProjectLayer() {
   const route = useArchiveRoute()
   const projectId = useLastDefined(route.projectId)
-  const { mounted, state } = usePresence(route.view === 'project', 'slow')
+  // 닫힌 뒤에도 이미지가 작품의 자리로 돌아가 자리를 넘길 때까지 남겨 둔다
+  const { mounted, state } = usePresence(route.view === 'project', 'travel')
   if (!mounted || !projectId) return null
   return <ProjectDetail key={projectId} projectId={projectId} state={state} />
 }

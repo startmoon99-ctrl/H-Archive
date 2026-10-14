@@ -42,7 +42,7 @@ function describe(dialog: DialogDescriptor, close: () => void): DialogView {
     case 'category':
       return {
         variant: 'modal',
-        label: dialog.categoryId ? '항성계 편집' : '새 항성계',
+        label: dialog.categoryId ? '성단 편집' : '새 성단',
         key: `category-${dialog.categoryId ?? 'new'}`,
         body: <CategoryForm categoryId={dialog.categoryId} onClose={close} />,
       }

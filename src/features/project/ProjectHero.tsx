@@ -34,6 +34,8 @@ export function ProjectHero({ project, category }: ProjectHeroProps) {
   const started = formatDate(project.startedAt)
   const latest = formatDate(lastActivity(project))
 
+  // 배열째 그리지 않는다. 아래에서 한 줄씩 key가 있는 div로 감싸므로 여기의 요소에는 key가 필요 없다.
+  /* oxlint-disable react/jsx-key */
   const lines: ReactNode[] = [
     <p className="hero__eyebrow eyebrow">
       <button type="button" className="hero__category" onClick={() => nav.toSystem(category.id)}>
@@ -76,6 +78,7 @@ export function ProjectHero({ project, category }: ProjectHeroProps) {
       </Button>
     </div>,
   ].filter(Boolean)
+  /* oxlint-enable react/jsx-key */
 
   return (
     <header className="hero">
@@ -91,6 +94,7 @@ export function ProjectHero({ project, category }: ProjectHeroProps) {
         ref={coverRef}
         type="button"
         className="hero__cover enter"
+        data-shared-cover
         style={cssVars({ 'enter-index': 1, parallax: projectMotion.heroParallax })}
         disabled={!cover}
         aria-label="대표 미디어 크게 보기"

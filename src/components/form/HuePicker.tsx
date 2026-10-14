@@ -7,7 +7,7 @@ interface HuePickerProps {
   onChange: (hue: number) => void
 }
 
-/** 항성의 색. 준비된 색을 고르거나 슬라이더로 직접 정한다. */
+/** 성단의 색. 준비된 색을 고르거나 슬라이더로 직접 정한다. */
 export function HuePicker({ id, value, onChange }: HuePickerProps) {
   return (
     <div className="hue-picker">

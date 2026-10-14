@@ -1,5 +1,6 @@
+/* 커서 주변의 어둠이 아주 조금 걷히는 정도의 빛. 눈에 띄는 색을 갖지 않는다. */
 .cursor-glow {
-  --size: 35rem;
+  --size: 30rem;
 
   position: fixed;
   left: calc(var(--size) / -2);
@@ -8,7 +9,7 @@
   width: var(--size);
   height: var(--size);
   border-radius: 50%;
-  background: radial-gradient(circle, rgb(124 110 255 / 0.13) 0%, rgb(79 131 255 / 0.05) 38%, transparent 68%);
+  background: radial-gradient(circle, rgb(var(--glow-rgb) / 0.055) 0%, rgb(var(--glow-rgb-2) / 0.02) 40%, transparent 68%);
   mix-blend-mode: screen;
   opacity: 0;
   pointer-events: none;

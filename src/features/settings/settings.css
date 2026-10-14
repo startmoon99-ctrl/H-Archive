@@ -55,14 +55,14 @@
 
 .settings__preset[aria-checked='true'] {
   border-color: var(--color-accent);
-  background: rgb(124 92 245 / 0.14);
-  box-shadow: var(--glow-soft) rgb(124 92 245 / calc(0.25 * var(--m-glow)));
+  background: rgb(var(--glow-rgb) / 0.14);
+  box-shadow: var(--glow-soft) rgb(var(--glow-rgb) / calc(0.25 * var(--m-glow)));
 }
 
 .settings__preset strong {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: 400;
   letter-spacing: var(--tracking-wide);
 }
 

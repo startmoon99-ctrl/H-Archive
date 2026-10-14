@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-4);
-  background: radial-gradient(circle, rgb(26 28 82 / 0.5) 0%, rgb(3 4 10 / 0.78) 70%);
+  background: radial-gradient(circle, rgb(var(--void-rgb) / 0.5) 0%, rgb(var(--void-rgb) / 0.78) 70%);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--dur-base) var(--ease-standard);
@@ -37,11 +37,11 @@
 .dropzone__ring {
   position: absolute;
   inset: 0;
-  border: 1px solid rgb(169 155 255 / 0.55);
+  border: 1px solid rgb(var(--light-rgb) / 0.55);
   border-radius: 50%;
   box-shadow:
-    var(--glow-soft) rgb(124 92 245 / calc(0.5 * var(--m-glow))),
-    inset var(--glow-soft) rgb(124 92 245 / calc(0.25 * var(--m-glow)));
+    var(--glow-soft) rgb(var(--glow-rgb) / calc(0.5 * var(--m-glow))),
+    inset var(--glow-soft) rgb(var(--glow-rgb) / calc(0.25 * var(--m-glow)));
   animation: dropzone-pulse 2.4s var(--ease-standard) infinite;
 }
 
