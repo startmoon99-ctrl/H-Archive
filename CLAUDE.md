@@ -88,7 +88,7 @@ interaction(입력) ─▶ camera(어디를 보는가) ─▶ scene(배치 → D
 | `camera/` | `cameraRig`(감쇠 · 이동 · 관성 · 시차) · `cameraView`(상태와 원근 투영) | 카메라의 움직임 성격 |
 | `interaction/` | `pointerControls`(마우스) · `touchControls`(터치) · `drag`(공통) | 조작 방식 |
 | `scene/` | `layout`(데이터 → 3D 위치) · `arrangement`(옮겨 가는 성단의 지금 자리) · `sceneUpdater`(매 프레임 DOM 위치 · `--s` · `--near`) | 배치 규칙 |
-| `environment/` | `particleField`(입자 배치) · `shaders` · `glRenderer` · `environment`(조립) | 배경과 입자 |
+| `environment/` | `particleField`(입자 배치) · `shaders` · `glRenderer` · `meteors`(별똥별) · `environment`(조립) | 배경과 입자 |
 | `effects/` | `cluster-effects.css` · `node-effects.css` · `PostEffects`(비네트 · 입자감) · `quality`(품질 조절) | 빛 · Hover 반응 · 화면 효과 |
 | `nodes/` | `ClusterNode` · `WorkNode`(구조와 누르는 영역만) | 성단 · 작품의 형태 |
 | `ui/` | `ClusterTitle` · `ProjectRail`(모바일) · `ProjectCard` · `SpaceSummary` | 장면 위의 글과 카드 |
@@ -154,6 +154,7 @@ config/motion.ts ─ motionStore(설정 · 저장 · 시스템 '동작 줄이기
 
 - **공간의 느낌 조절**(간격 · 깊이 · 카메라의 무게 · 시차 · 입자의 양과 번짐): `config/space.ts`만 고친다.
 - **성단 위치 조절**(설정 → Space): 입력은 `interaction/arrangeControls`(성단을 잡은 입력만 가로챔), 옮겨 가는 자리는 `scene/arrangement`, 입자 무리는 셰이더의 `uMove*`로 함께 옮긴다. 끄는 무게 · 꼬리 길이는 `config/space.ts`의 `arrange`, 들어 올린 모습은 `effects/cluster-effects.css`의 `data-held`.
+- **배경 별 · 별빛 단계 · 별똥별**(설정 → Space → 별빛): 값은 `config/space.ts`의 `particles.stars`(별가루 · 반짝이는 별 · 빛살, `levels`가 생동감 단계) · `particles.meteors`. 고른 단계와 별똥별 켜짐은 `store/skyStore`(localStorage). 움직임에는 Background Motion이 곱해져 동작 줄이기에서는 멈춘다.
 - **빛 · Hover 반응만 바꾸기**: `features/space/effects/*.css`. 동작은 그대로 남는다.
 - **커서에 반응하는 거리 · 성단의 숨 · 시차의 크기**: `config/space.ts`의 `interaction.cluster*` · `breath` · `particles.aware` · `camera.parallaxShiftPx`.
 - **작품 ↔ 상세 화면 전환의 시간 · 가감속**: `config/motion.ts`의 `projectMotion.travel` · `travelEase`.

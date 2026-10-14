@@ -7,6 +7,8 @@ export const APP = {
 export const STORAGE_KEYS = {
   motion: 'h-archive:motion',
   sound: 'h-archive:sound',
+  /** 별빛의 생동감 · 별똥별(이 브라우저에만 저장) */
+  sky: 'h-archive:sky',
   /** 직접 옮긴 성단의 자리(이 브라우저에만 저장) */
   placements: 'h-archive:placements',
 } as const

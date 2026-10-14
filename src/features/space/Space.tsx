@@ -10,6 +10,7 @@ import { provideWorkLocation } from '@/motion/travel'
 import { useArchiveStore } from '@/store/archiveStore'
 import { selectActiveMotion, useMotionStore } from '@/store/motionStore'
 import { usePlacementStore } from '@/store/placementStore'
+import { useSkyStore } from '@/store/skyStore'
 import { useUiStore, type TravelOrigin } from '@/store/uiStore'
 import type { ID } from '@/types/archive'
 import { cssVars } from '@/utils/css'
@@ -96,6 +97,8 @@ export function Space() {
   const arranging = useUiStore((state) => state.arranging)
   const viewResetRun = useUiStore((state) => state.viewResetRun)
   const placements = usePlacementStore((state) => state.placements)
+  const skyLevel = useSkyStore((state) => state.level)
+  const meteorsOn = useSkyStore((state) => state.meteors)
 
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -281,6 +284,11 @@ export function Space() {
   useEffect(() => {
     environmentRef.current?.resize(viewport.width, viewport.height)
   }, [viewport.width, viewport.height, viewport.touchUi])
+
+  // 별빛 설정. 입자를 만들기 전에 알려 주어야 반짝이는 별의 비율이 처음부터 맞다. 별똥별은 인트로가 끝난 뒤에만
+  useEffect(() => {
+    environmentRef.current?.setSky(skyLevel, meteorsOn && introPhase === 'done')
+  }, [skyLevel, meteorsOn, introPhase, viewport.touchUi])
 
   // 성단의 구성이 달라졌을 때만 입자를 다시 만든다
   const fieldKey = particleFieldKey(layout)

@@ -3,15 +3,18 @@ import { pointer } from '@/motion/pointer'
 import { getMotion } from '@/motion/runtime'
 import type { Point } from '@/types/ui'
 import { readColorToken } from '@/utils/color'
-import { cameraView, focusDistance } from '../camera/cameraView'
+import { cameraView, focusDistance, project, type Projected } from '../camera/cameraView'
 import { createQualityGovernor, renderRatio } from '../effects/quality'
 import type { MovingCluster } from '../scene/arrangement'
 import type { SpaceLayout } from '../scene/layout'
 import { createGlRenderer } from './glRenderer'
+import { createMeteors } from './meteors'
 import { buildParticleField } from './particleField'
-import { MAX_MOVES } from './shaders'
+import { MAX_COVERS, MAX_MOVES } from './shaders'
 
 const config = spaceConfig.particles
+const meteorConfig = config.meteors
+const { twinkle, sparkle, screen, levels, driftPeriodSec } = config.stars
 const { breath, interaction, arrange } = spaceConfig
 const MS_PER_SECOND = 1000
 /** 감싸는 세기가 가장 커지는 시점(전체 시간 대비). 작품의 이미지가 제자리에 닿는 때와 맞춘다 */
@@ -48,6 +51,11 @@ export interface Environment {
   resize(width: number, height: number): void
   /** 성단 배치나 입자 밀도가 바뀌면 입자를 다시 만든다 */
   rebuild(layout: SpaceLayout, density: number, scale: number): void
+  /**
+   * 별빛 설정: 생동감 단계(config의 stars.levels 번호)와 별똥별.
+   * 반짝이는 별의 비율이 달라지면 입자를 다시 만든다(점의 자리는 그대로다)
+   */
+  setSky(level: number, meteors: boolean): void
   draw(dt: number, now: number, frame: EnvironmentFrame): void
   /** 주변 입자가 한 지점으로 다가왔다가 풀린다(상세 화면에서 돌아온 작품을 감싼다). arriveMs 뒤에 가장 가까이 모인다 */
   wrap(arriveMs: number): void
@@ -64,6 +72,11 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
 
   const quality = createQualityGovernor(touchDevice)
   const lineColor = readColorToken('--particle-thread')
+  const streakColor = readColorToken('--particle-star')
+  const meteors = createMeteors()
+  let sky = { level: 0, meteors: false }
+  /** 마지막으로 입자를 만든 입력. 별빛 단계가 바뀌면 같은 입력으로 다시 만든다 */
+  let built: { layout: SpaceLayout; density: number; scale: number } | null = null
   let size = { width: 1, height: 1 }
   /** 갑자기 켜지고 꺼지지 않도록 부드럽게 따라가는 값: 커서가 화면 안에 있는가 · 전체 보기인가 */
   let presence = 0
@@ -91,6 +104,34 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
     }
   }
 
+  /** 별똥별을 가리는 성단: 별똥별의 머리에 가까운 순서로 MAX_COVERS개(화면 중심 기준 px) */
+  const covers = new Float32Array(MAX_COVERS * 4)
+  let coverCount = 0
+  const projected: Projected = { x: 0, y: 0, scale: 0, depth: 0 }
+  const candidates: { x: number; y: number; radius: number; gap: number }[] = []
+
+  const fillCovers = (moving: MovingCluster[] | undefined) => {
+    coverCount = 0
+    if (!built || meteors.streakVertices + meteors.burstVertices === 0) return
+    candidates.length = 0
+    const cx = cameraView.width / 2
+    const cy = cameraView.height / 2
+    for (const cluster of built.layout.clusters) {
+      // 옮기는 중인 성단은 지금 자리에서 가린다
+      const at = moving?.find((item) => item.id === cluster.category.id) ?? cluster
+      if (!project(at.x, at.y, at.z, projected)) continue
+      const x = projected.x - cx
+      const y = projected.y - cy
+      const radius = cluster.radius * meteorConfig.behindClusters.radiusFactor * projected.scale
+      candidates.push({ x, y, radius, gap: Math.hypot(x - meteors.headX, y - meteors.headY) - radius })
+    }
+    candidates.sort((a, b) => a.gap - b.gap)
+    for (const cover of candidates.slice(0, MAX_COVERS)) {
+      covers.set([cover.x, cover.y, cover.radius, meteorConfig.behindClusters.strength], coverCount * 4)
+      coverCount++
+    }
+  }
+
   const applySize = () => {
     renderer.resize(size.width, size.height, renderRatio(size.width, size.height, quality.current()))
     // 화면에 얹는 효과(effects/PostEffects)도 같은 단계를 따른다
@@ -104,9 +145,17 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
     },
 
     rebuild(layout, density, scale) {
-      renderer.setParticles(buildParticleField(layout, density, scale))
+      built = { layout, density, scale }
+      renderer.setParticles(buildParticleField(layout, density, scale, levels[sky.level].twinkleShare))
       builtHomes.clear()
       for (const cluster of layout.clusters) builtHomes.set(cluster.category.id, [cluster.x, cluster.y, cluster.z])
+    },
+
+    setSky(level, meteorsOn) {
+      const next = { level: Math.min(Math.max(level, 0), levels.length - 1), meteors: meteorsOn }
+      const reshape = levels[next.level].twinkleShare !== levels[sky.level].twinkleShare
+      sky = next
+      if (reshape && built) this.rebuild(built.layout, built.density, built.scale)
     },
 
     draw(dt, now, frame) {
@@ -116,6 +165,10 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
       presence += ((pointer.active && !frame.behind ? 1 : 0) - presence) * k
       overviewAmount += ((frame.overview ? 1 : 0) - overviewAmount) * k
       const background = Math.min(motion.background, 1)
+      const star = levels[sky.level]
+      // 별똥별은 상세 화면 뒤(글을 읽는 데 방해되지 않게)와 움직임이 꺼졌을 때(동작 줄이기)는 나타나지 않는다
+      meteors.update(now, { enabled: sky.meteors && !frame.behind && background > 0, scale: built?.scale ?? 1 })
+      fillCovers(frame.moving)
       const attention = presence * overviewAmount * Math.min(motion.mouseFollow, 1)
 
       // 감싸기: 이미지가 닿을 때까지 다가왔다가 천천히 풀린다
@@ -158,8 +211,21 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
           blurPx: config.blurPx,
           maxPoint: config.maxPointPx,
           glow: 0.45 + 0.55 * motion.glow,
-          twinkle: config.twinkle * Math.min(motion.background, 1),
+          twinkle: config.twinkle * background,
+          // 별의 움직임은 별빛 단계와 Background Motion을 따른다. 동작 줄이기(0)에서는 멈춘 점이 되고 빛살도 내지 않는다
+          starPeriod: [star.microPeriodSec[0], star.microPeriodSec[1], star.twinklePeriodSec[0], star.twinklePeriodSec[1]],
+          starFade: [star.microFade * background, star.twinkleFade * background, star.twinkleGrow * background, star.twinkleGlow],
+          starHalo: twinkle.halo,
+          twinkleLift: star.twinkleLift * background,
+          starDrift: [star.driftPx * background, driftPeriodSec[0], driftPeriodSec[1]],
+          sparkle: [star.flareSlotSec, sparkle.count, star.flareChance * background, sparkle.rays],
+          flareSec: [sparkle.flareSec[0], sparkle.flareSec[1]],
+          starShare: Math.min(1, (cameraView.focal / screen.referenceFocalPx) ** screen.power),
           lineColor,
+          streakColor,
+          covers,
+          coverCount,
+          coverInner: meteorConfig.behindClusters.inner,
           moveFrom,
           moveBy,
           moveVelocity,
@@ -168,6 +234,7 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
         quality.current().particles,
         frame.lines,
         frame.lineVertices,
+        meteors,
       )
     },
 

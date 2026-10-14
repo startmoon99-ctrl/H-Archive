@@ -133,9 +133,145 @@ export const spaceConfig = {
      * 아주 먼 배경의 점. 공간을 둘러싼 구 껍질(반지름 범위)에 흩어 두어, 카메라가 어느 쪽으로 돌아도
      * 배경이 비지 않는다. 거의 움직이지 않아 깊이의 기준이 된다
      */
-    far: { count: 5200, radius: [5200, 9000], size: [9, 26], alpha: [0.35, 1] },
+    far: { count: 7600, radius: [5200, 9000], alpha: [0.45, 1] },
     /** 공간을 채우는 먼지. 카메라가 이동할 때 곁을 지나간다 */
-    dust: { count: 1000, margin: 1500, depth: [-900, 2800], size: [1.3, 3.6], alpha: [0.14, 0.5] },
+    dust: { count: 1000, margin: 1500, depth: [-900, 2800], alpha: [0.2, 0.6] },
+    /**
+     * 배경(먼 점 · 먼지)의 별. 원근 · 초점과 관계없이 화면에서 늘 작고 또렷한 점이다(크기는 CSS px, 화면 배율이 곱해진다).
+     * 대부분은 별가루, 일부는 천천히 반짝이는 별, 극소수는 가끔 십자 빛살을 내는 별이다.
+     * 움직임(옅어짐 · 반짝임 · 빛살 · 표류)은 Background Motion 설정이 곱해져, 동작 줄이기에서는 멈춘 점이 된다.
+     */
+    stars: {
+      /** 별가루: 아주 느리게 옅어졌다 돌아온다(주기 · 옅어지는 정도는 levels) */
+      micro: { size: [0.5, 1.5] },
+      /** 반짝이는 별: 밝기와 크기가 함께 변하고, 아주 옅은 빛무리(반지름 = 크기 × halo)가 있다(비율 · 주기 · 변하는 정도는 levels) */
+      twinkle: { size: [1.5, 3], halo: 2 },
+      /**
+       * 빛살: 성단 둘레(반지름 × spread)에 놓인 몇 개의 별. 차례(levels의 flareSlotSec)마다 많아야 하나가
+       * flareChance의 확률로 잠깐(flareSec) 십자 빛살을 낸다. 그래서 둘이 함께 번쩍이지 않는다. 빛살 길이 = 크기 × rays
+       */
+      sparkle: {
+        count: 12,
+        size: [1.6, 2.2],
+        alpha: [0.6, 0.85],
+        spread: [1.1, 2.4],
+        flareSec: [0.3, 0.8],
+        rays: 9,
+      },
+      /** 모든 배경 점이 제자리에서 떠다니는 주기 범위(초). 거리는 levels */
+      driftPeriodSec: [10, 30],
+      /**
+       * 작은 화면에서 그리는 별의 비율 = (초점 거리 / referenceFocalPx)^power, 최대 1.
+       * 초점 거리가 짧은 화면(휴대폰)은 같은 별이 좁은 화면에 몰려 빽빽해 보이므로 일부만 그린다(빛살 별은 늘 그린다)
+       */
+      screen: { referenceFocalPx: 1350, power: 1.5 },
+      /**
+       * 별빛의 생동감(설정 → Space → 별빛). 0번이 기본이고, 한 단계 오를 때마다 눈에 띄게 반짝임 · 빛살 · 표류가 잦고 커진다.
+       * twinkleShare: 배경 점 중 반짝이는 별의 비율 · twinklePeriodSec / twinkleFade: 반짝이는 주기(초)와 옅어지는 비율
+       * twinkleGrow / twinkleGlow: 반짝일 때 크기가 변하는 비율과 빛무리 세기 · twinkleLift: 가장 밝을 때 더 밝아지는 비율
+       * microPeriodSec / microFade: 별가루가 옅어지는 주기(초)와 비율 · flareSlotSec / flareChance: 빛살의 차례(초)와 확률
+       * driftPx: 떠다니는 거리(px). 빛살 · 반짝임 · 표류에는 Background Motion 설정이 함께 곱해진다
+       */
+      levels: [
+        {
+          label: '기본',
+          twinkleShare: 0.07,
+          twinklePeriodSec: [3, 8],
+          twinkleFade: 0.7,
+          twinkleGrow: 0.3,
+          twinkleGlow: 0.1,
+          twinkleLift: 0,
+          microPeriodSec: [9, 22],
+          microFade: 0.5,
+          flareSlotSec: 3,
+          flareChance: 0.5,
+          driftPx: 2.5,
+        },
+        {
+          label: '조금 더 살아있게',
+          twinkleShare: 0.13,
+          twinklePeriodSec: [2, 5.5],
+          twinkleFade: 0.85,
+          twinkleGrow: 0.5,
+          twinkleGlow: 0.13,
+          twinkleLift: 0.5,
+          microPeriodSec: [5, 13],
+          microFade: 0.7,
+          flareSlotSec: 1.8,
+          flareChance: 0.65,
+          driftPx: 4.5,
+        },
+        {
+          label: '더 살아있게',
+          twinkleShare: 0.21,
+          twinklePeriodSec: [1.4, 3.8],
+          twinkleFade: 0.95,
+          twinkleGrow: 0.7,
+          twinkleGlow: 0.16,
+          twinkleLift: 1,
+          microPeriodSec: [3, 8],
+          microFade: 0.85,
+          flareSlotSec: 1.1,
+          flareChance: 0.8,
+          driftPx: 7,
+        },
+        {
+          label: '아주 살아있게',
+          twinkleShare: 0.3,
+          twinklePeriodSec: [0.9, 2.6],
+          twinkleFade: 1,
+          twinkleGrow: 0.9,
+          twinkleGlow: 0.2,
+          twinkleLift: 1.6,
+          microPeriodSec: [2, 5],
+          microFade: 0.95,
+          flareSlotSec: 0.7,
+          flareChance: 0.9,
+          driftPx: 10,
+        },
+      ],
+    },
+    /**
+     * 별똥별(설정 → Space → 별빛, 기본으로 켜져 있다). 멀리서 가는 빛줄기 하나가 천천히 지나가다 멈추며,
+     * 꼬리를 거두고 bursts 중 하나의 모습으로 반짝인 뒤 사라진다. 크기는 CSS px(화면 배율이 곱해진다).
+     * 성단보다 멀리 있으므로 성단과 겹치면 그 뒤로 가려진다(behindClusters).
+     * 동작 줄이기(Background Motion 0)나 상세 화면 뒤 · 인트로에서는 나타나지 않는다.
+     */
+    meteors: {
+      /** 하나가 사라진 뒤 다음이 나타나기까지(초). 지나가는 시간과 합쳐 10초 안에 하나씩 나온다 */
+      gapSec: [3, 5.5],
+      /** 빛줄기: 지나가는 시간(초) · 움직이는 거리(px) · 꼬리 길이(px) · 밝기 */
+      durationSec: [2.4, 3.2],
+      travelPx: [180, 300],
+      tailPx: [150, 240],
+      alpha: 0.65,
+      /** 머리 쪽 굵기(px). 꼬리 끝으로 갈수록 가늘어진다 */
+      widthPx: 1.6,
+      /**
+       * 사라질 때의 모습. 별똥별마다 하나를 무작위로 고르고(weight 비율, 바로 앞과 같은 것은 피한다),
+       * 시간(초) · 크기(px, 빛살 길이나 퍼지는 거리) · 밝기를 정한다. 모양은 environment/shaders.ts의 STREAK_FRAGMENT.
+       * cross: 십자 빛살 ✦ · glint: 긴 십자에 짧은 대각선이 더해진 별빛 · flare: 나아가던 쪽으로 가늘고 길게 번쩍이는 섬광
+       * twice: 두 번 깜빡이는 십자 · embers: 진행 방향으로 흩어지며 꺼지는 불티
+       */
+      bursts: [
+        { kind: 'cross', weight: 1, durationSec: 0.7, sizePx: 20, alpha: 0.9 },
+        { kind: 'glint', weight: 1, durationSec: 0.85, sizePx: 26, alpha: 0.85 },
+        { kind: 'flare', weight: 1, durationSec: 0.6, sizePx: 30, alpha: 0.85 },
+        { kind: 'twice', weight: 1, durationSec: 1, sizePx: 18, alpha: 0.85 },
+        { kind: 'embers', weight: 1, durationSec: 1.2, sizePx: 30, alpha: 0.85 },
+      ],
+      /**
+       * 성단 뒤로 지나갈 때 가려지는 범위: 성단 반지름 × radiusFactor 안에서 옅어지기 시작해
+       * × inner 안쪽에서는 strength만큼 가려진다
+       */
+      behindClusters: { radiusFactor: 1.15, inner: 0.45, strength: 0.92 },
+      /** 내려가는 각도 범위(도, 가로 기준) */
+      angleDeg: [16, 46],
+      /** 나타나는 영역(화면 크기 대비). 위쪽에 치우친다 */
+      area: { x: [0.1, 0.9], y: [0.06, 0.5] },
+      /** 카메라에서의 거리(world). 멀어서 시차가 작다 */
+      distance: 5000,
+    },
     /**
      * 배경 점과 먼지가 퍼지는 범위를 이 간격(world)으로 끊어 잡는다. 성단을 조금 옮겨도 범위가 그대로라
      * 입자를 다시 만들 때 배경이 튀지 않는다(성단 위치 조절)
@@ -163,9 +299,10 @@ export const spaceConfig = {
     /** 상세 화면에서 돌아온 작품을 주변 입자가 잠시 감싸는 범위와 다가오는 거리(px) */
     wrapRadiusPx: 240,
     wrapPx: 22,
-    /** 초점에서 벗어난 입자가 번지는 크기(px) */
+    /** 초점에서 벗어난 성단 입자가 번지는 크기(px) */
     blurPx: 16,
     maxPointPx: 170,
+    /** 성단 입자가 반짝이는 정도. 배경의 별은 stars가 정한다 */
     twinkle: 0.5,
   },
 
