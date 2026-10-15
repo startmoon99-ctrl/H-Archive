@@ -14,6 +14,7 @@ import { MAX_COVERS, MAX_MOVES } from './shaders'
 
 const config = spaceConfig.particles
 const meteorConfig = config.meteors
+const backdropConfig = config.backdrop
 const { twinkle, sparkle, screen, levels, driftPeriodSec } = config.stars
 const { breath, interaction, arrange } = spaceConfig
 const MS_PER_SECOND = 1000
@@ -74,6 +75,37 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
   const lineColor = readColorToken('--particle-thread')
   const streakColor = readColorToken('--particle-star')
   const meteors = createMeteors()
+  /** 가장 뒤의 파노라마를 올린 시각(나타나는 정도의 기준). 아직 없으면 -1 */
+  let backdropAt = -1
+  let disposed = false
+
+  // 가장 뒤의 파노라마: 화면을 막지 않게 따로 받아 풀고, 다 되면 천천히 나타난다.
+  // 터치 기기는 작은 이미지를 쓰고, 이 기기가 올릴 수 없을 만큼 크면 줄여서 올린다
+  const loadBackdrop = async () => {
+    if (!backdropConfig.enabled) return
+    try {
+      const response = await fetch(touchDevice ? backdropConfig.srcLow : backdropConfig.src)
+      if (!response.ok) throw new Error(`${response.status} ${response.url}`)
+      const blob = await response.blob()
+      let image = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' })
+      const limit = renderer.maxTextureSize
+      if (image.width > limit) {
+        const height = Math.round((limit * image.height) / image.width)
+        image.close()
+        image = await createImageBitmap(blob, { resizeWidth: limit, resizeHeight: height, resizeQuality: 'high' })
+      }
+      if (disposed) {
+        image.close()
+        return
+      }
+      renderer.setBackdrop(image)
+      image.close()
+      backdropAt = performance.now()
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn('[backdrop] 배경 이미지를 불러오지 못했습니다.', error)
+    }
+  }
+  void loadBackdrop()
   let sky = { level: 0, meteors: false }
   /** 마지막으로 입자를 만든 입력. 별빛 단계가 바뀌면 같은 입력으로 다시 만든다 */
   let built: { layout: SpaceLayout; density: number; scale: number } | null = null
@@ -235,6 +267,14 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
         frame.lines,
         frame.lineVertices,
         meteors,
+        {
+          yawOffset: (backdropConfig.yawOffsetDeg * Math.PI) / 180,
+          tone: [
+            backdropConfig.brightness,
+            backdropConfig.saturation,
+            backdropAt < 0 ? 0 : smoothstep((now - backdropAt) / backdropConfig.fadeInMs),
+          ],
+        },
       )
     },
 
@@ -244,6 +284,7 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
     },
 
     dispose() {
+      disposed = true
       renderer.dispose()
     },
   }

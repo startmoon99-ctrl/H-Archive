@@ -326,6 +326,22 @@ export const spaceConfig = {
       distance: 5000,
     },
     /**
+     * 가장 뒤의 배경: 정거원통(equirectangular, 가로:세로 2:1) 파노라마 한 장. 무한히 먼 곳이라 카메라의 방향
+     * (둘러보기 · 끌어 돌리기)만 따르고 이동 · 확대에는 움직이지 않는다. 이미지는 public/space에 둔다.
+     * 터치 기기와 큰 텍스처를 올리지 못하는 기기는 srcLow를 쓴다. 다 받은 뒤 fadeInMs에 걸쳐 나타난다
+     */
+    backdrop: {
+      enabled: true,
+      src: '/space/white_dwarf_star.png',
+      srcLow: '/space/white_dwarf_star1313.png',
+      /** 밝기 배율 · 채도(0이면 무채색, 1이면 원본) */
+      brightness: 1.6,
+      saturation: 1,
+      /** 정면(처음 구도)에 올 파노라마의 가로 위치(도). 0이면 이미지의 가로 가운데 */
+      yawOffsetDeg: 0,
+      fadeInMs: 2000,
+    },
+    /**
      * 배경 점과 먼지가 퍼지는 범위를 이 간격(world)으로 끊어 잡는다. 성단을 조금 옮겨도 범위가 그대로라
      * 입자를 다시 만들 때 배경이 튀지 않는다(성단 위치 조절)
      */

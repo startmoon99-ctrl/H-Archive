@@ -36,6 +36,11 @@ export interface CameraRig {
    * goal에 yaw · pitch가 있으면 그 방향으로 함께 돌아가고(가까운 쪽으로), 없으면 지금 방향을 유지한다.
    */
   flyTo(goal: CameraGoal, durationMs: number, ease?: (t: number) => number): void
+  /**
+   * 화면이 요구하는 구도가 from에서 to로 바뀌었다(창 크기 조절 등). 보던 각도와 자리는 그대로 두고
+   * 그 차이만큼 중심을 옮기고 배율을 곱한다. 이동 중이면 출발점과 도착점을 함께 고친다
+   */
+  adjust(from: CameraGoal, to: CameraGoal): void
   /** 지금 향하고 있는 목표(이동 중이면 그 도착점, 방향 포함). 나중에 그 자리로 되돌아올 때 쓴다 */
   current(): Required<CameraGoal>
   /** 사용자가 공간을 잡았다: 진행 중이던 이동과 관성을 멈춘다 */
@@ -293,6 +298,23 @@ export function createCameraRig(): CameraRig {
         duration: Math.max(durationMs, 1),
         ease,
         panFrom: [idle.panX, idle.panY],
+      }
+    },
+
+    adjust(from, to) {
+      const ratio = to.zoom / from.zoom
+      const shiftBy = (target: Required<CameraGoal>) => {
+        target.x += to.x - from.x
+        target.y += to.y - from.y
+        target.z += to.z - from.z
+        target.zoom *= ratio
+      }
+      if (tween) {
+        shiftBy(tween.from)
+        shiftBy(tween.to)
+      } else {
+        shiftBy(goal)
+        clampGoal()
       }
     },
 

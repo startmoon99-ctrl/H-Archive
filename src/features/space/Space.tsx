@@ -113,6 +113,8 @@ export function Space() {
   const departureRef = useRef<CameraGoal | null>(null)
   /** 직전에 카메라를 옮겼을 때 성단 위치 조절 중이었는가 */
   const arrangingRef = useRef(arranging)
+  /** 직전에 카메라를 옮겼을 때의 목표와 창 크기. 창 크기만 바뀌었는지 가려낸다 */
+  const previousGoalRef = useRef<{ goal: CameraGoal; width: number; height: number } | null>(null)
   const [elements] = useState<SceneElements>(() => ({ clusters: new Map(), nodes: new Map() }))
   const [rig] = useState(createCameraRig)
   const [updater] = useState(() => createSceneUpdater(elements))
@@ -167,18 +169,30 @@ export function Space() {
     })
   }, [rig, layout, focused])
 
-  const travelContext = useLatest({ route, introPhase, introRevealMs })
+  const travelContext = useLatest({ route, introPhase, introRevealMs, width: viewport.width, height: viewport.height })
   const { x: goalX, y: goalY, z: goalZ, zoom: goalZoom } = goal
 
   useEffect(() => {
     const before = previousRef.current
-    const { route, introPhase, introRevealMs } = travelContext.current
+    const { route, introPhase, introRevealMs, width, height } = travelContext.current
     previousRef.current = { view: route.view, categoryId: route.categoryId, projectId: route.projectId }
+    const previous = previousGoalRef.current
+    const next = { x: goalX, y: goalY, z: goalZ, zoom: goalZoom }
+    previousGoalRef.current = { goal: next, width, height }
     // 성단 위치 조절 중에는 성단을 옮겨 전체 보기의 범위가 달라져도 카메라가 따라 움직이지 않는다.
     // 들어올 때는 전체 보기로, 마치면 바뀐 배치가 다 보이는 자리로 옮겨 간다
     const wasArranging = arrangingRef.current
     arrangingRef.current = arranging
     if (arranging && wasArranging) return
+    // 창 크기만 바뀌었다(크기 조절 · 전체 화면): 보던 각도와 자리는 그대로 두고, 새 창에 맞춘 구도만큼 배율과 중심을 옮긴다.
+    // 새 구도로 날아가며 정면으로 되돌리면 둘러보거나 돌려 둔 시점이 가운데로 정렬돼 버린다
+    const sameView =
+      before.view === route.view && before.categoryId === route.categoryId && before.projectId === route.projectId
+    const resized = previous !== null && (previous.width !== width || previous.height !== height)
+    if (sameView && resized && placedRef.current && introPhase === 'done' && arranging === wasArranging) {
+      rig.adjust(previous.goal, next)
+      return
+    }
     // 같은 성단 안에서 작품을 열면 그 작품으로 다가가고, 닫으면 누르기 직전의 자리로 그대로 물러난다
     const sameCluster = before.categoryId === route.categoryId
     const opening = sameCluster && before.view === 'system' && route.view === 'project'

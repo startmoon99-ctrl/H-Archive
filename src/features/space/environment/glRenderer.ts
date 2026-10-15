@@ -1,6 +1,15 @@
 import type { MeteorFrame } from './meteors'
 import { PARTICLE_STRIDE } from './particleField'
-import { LINE_FRAGMENT, LINE_VERTEX, POINT_FRAGMENT, POINT_VERTEX, STREAK_FRAGMENT, STREAK_VERTEX } from './shaders'
+import {
+  BACKDROP_FRAGMENT,
+  BACKDROP_VERTEX,
+  LINE_FRAGMENT,
+  LINE_VERTEX,
+  POINT_FRAGMENT,
+  POINT_VERTEX,
+  STREAK_FRAGMENT,
+  STREAK_VERTEX,
+} from './shaders'
 
 const FLOAT_BYTES = 4
 /** 선의 꼭짓점 하나: x y z · alpha */
@@ -70,10 +79,22 @@ export interface FrameUniforms {
   trail: [number, number, number]
 }
 
+/** 가장 뒤의 파노라마를 그리는 값 */
+export interface BackdropUniforms {
+  /** 정면에 올 파노라마의 가로 위치(라디안) */
+  yawOffset: number
+  /** 밝기 배율 · 채도 · 나타난 정도(0 ~ 1) */
+  tone: [number, number, number]
+}
+
 export interface GlRenderer {
   /** 화면 크기(CSS px)와 실제로 그릴 해상도 배율 */
   resize(width: number, height: number, ratio: number): void
   setParticles(data: Float32Array): void
+  /** 이 기기가 올릴 수 있는 텍스처의 최대 크기(px) */
+  readonly maxTextureSize: number
+  /** 가장 뒤의 파노라마(정거원통). null이면 그리지 않는다 */
+  setBackdrop(image: TexImageSource | null): void
   /**
    * @param particleFraction 0 ~ 1. 품질 단계에 따라 입자의 일부만 그린다
    * @param meteor 별똥별(meteors.ts)의 빛줄기 · 빛살. 꼭짓점이 없으면 그리지 않는다
@@ -84,6 +105,7 @@ export interface GlRenderer {
     lines: Float32Array,
     lineVertices: number,
     meteor: MeteorFrame,
+    backdrop: BackdropUniforms,
   ): void
   dispose(): void
 }
@@ -128,6 +150,11 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer | null {
   const gl = canvas.getContext('webgl2', { alpha: true, antialias: false, premultipliedAlpha: true })
   if (!gl) return null
 
+  const backdropProgram = link(gl, BACKDROP_VERTEX, BACKDROP_FRAGMENT)
+  const backdropUniform = uniformLookup(gl, backdropProgram)
+  // 꼭짓점을 gl_VertexID로 만드므로 속성 없는 빈 묶음이면 된다
+  const backdropArray = gl.createVertexArray()
+  let backdropTexture: WebGLTexture | null = null
   const pointProgram = link(gl, POINT_VERTEX, POINT_FRAGMENT)
   const lineProgram = link(gl, LINE_VERTEX, LINE_FRAGMENT)
   const streakProgram = link(gl, STREAK_VERTEX, STREAK_FRAGMENT)
@@ -201,8 +228,45 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer | null {
       gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW)
     },
 
-    draw(frame, particleFraction, lines, lineVertices, meteor) {
+    maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE) as number,
+
+    setBackdrop(image) {
+      if (backdropTexture) gl.deleteTexture(backdropTexture)
+      backdropTexture = null
+      if (!image) return
+      backdropTexture = gl.createTexture()
+      gl.bindTexture(gl.TEXTURE_2D, backdropTexture)
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+      // 가로는 한 바퀴 이어지고 세로는 끝에서 멈춘다. 화면 픽셀과 원본이 거의 1:1이라 밉맵 없이 그린다(이음매 · 메모리 절약)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+      gl.bindTexture(gl.TEXTURE_2D, null)
+    },
+
+    draw(frame, particleFraction, lines, lineVertices, meteor, backdrop) {
       gl.clear(gl.COLOR_BUFFER_BIT)
+
+      // 가장 뒤의 파노라마: 입자 · 선보다 먼저 화면 전체를 칠한다
+      if (backdropTexture && backdrop.tone[2] > 0) {
+        gl.useProgram(backdropProgram)
+        gl.activeTexture(gl.TEXTURE0)
+        gl.bindTexture(gl.TEXTURE_2D, backdropTexture)
+        gl.uniform1i(backdropUniform('uImage'), 0)
+        gl.uniform3fv(backdropUniform('uRight'), frame.right)
+        gl.uniform3fv(backdropUniform('uDown'), frame.down)
+        gl.uniform3fv(backdropUniform('uBack'), frame.back)
+        gl.uniform1f(backdropUniform('uFocal'), frame.focal)
+        gl.uniform2f(backdropUniform('uHalf'), size.width / 2, size.height / 2)
+        gl.uniform1f(backdropUniform('uYawOffset'), backdrop.yawOffset)
+        gl.uniform3fv(backdropUniform('uTone'), backdrop.tone)
+        gl.bindVertexArray(backdropArray)
+        gl.drawArrays(gl.TRIANGLES, 0, 3)
+        gl.bindTexture(gl.TEXTURE_2D, null)
+      }
 
       if (lineVertices > 0) {
         gl.useProgram(lineProgram)
@@ -285,6 +349,9 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer | null {
       gl.deleteProgram(pointProgram)
       gl.deleteProgram(lineProgram)
       gl.deleteProgram(streakProgram)
+      gl.deleteProgram(backdropProgram)
+      gl.deleteVertexArray(backdropArray)
+      if (backdropTexture) gl.deleteTexture(backdropTexture)
     },
   }
 }

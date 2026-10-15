@@ -401,3 +401,48 @@ void main() {
   outColor = vec4(uColor * alpha, alpha);
 }
 `
+
+/**
+ * 가장 뒤의 배경: 화면 전체를 덮는 삼각형 하나에 정거원통 파노라마를 그린다.
+ * 픽셀마다 카메라에서 나가는 방향을 구해(toScreen의 반대) 경도 · 위도로 이미지를 읽는다.
+ * 카메라의 위치는 쓰지 않으므로 이동 · 확대에는 움직이지 않고 방향에만 따른다.
+ */
+export const BACKDROP_VERTEX = /* glsl */ `#version 300 es
+precision highp float;
+out vec2 vNdc;
+
+void main() {
+  // 화면을 덮는 큰 삼각형(꼭짓점 셋, 버퍼 없이 gl_VertexID로)
+  vec2 corner = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)) * 2.0 - 1.0;
+  vNdc = corner;
+  gl_Position = vec4(corner, 0.0, 1.0);
+}
+`
+
+export const BACKDROP_FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+uniform sampler2D uImage;
+uniform vec3 uRight;
+uniform vec3 uDown;
+uniform vec3 uBack;
+uniform float uFocal;
+uniform vec2 uHalf;
+uniform float uYawOffset;   // 라디안
+uniform vec3 uTone;         // x: 밝기, y: 채도, z: 불투명도(나타나는 정도)
+in vec2 vNdc;
+out vec4 outColor;
+
+void main() {
+  // 이 픽셀을 지나는 시선의 방향(world, y는 아래)
+  vec2 screen = vec2(vNdc.x * uHalf.x, -vNdc.y * uHalf.y);
+  vec3 dir = normalize(uRight * screen.x + uDown * screen.y - uBack * uFocal);
+  // 처음 구도(-z를 바라봄)가 이미지의 가로 가운데에 오도록 경도를 잰다
+  float longitude = atan(dir.x, -dir.z) + uYawOffset;
+  float latitude = asin(clamp(-dir.y, -1.0, 1.0));
+  vec2 uv = vec2(0.5 + longitude / 6.2831853, 0.5 - latitude / 3.1415927);
+  vec3 color = texture(uImage, uv).rgb;
+  float gray = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color = mix(vec3(gray), color, uTone.y) * uTone.x;
+  outColor = vec4(color * uTone.z, uTone.z);
+}
+`
