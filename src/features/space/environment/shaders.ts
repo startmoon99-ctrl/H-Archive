@@ -446,3 +446,91 @@ void main() {
   outColor = vec4(color * uTone.z, uTone.z);
 }
 `
+
+/**
+ * 아주 먼 곳의 그림(은하 · 성운): 그림의 프레임들(텍스처 배열)을 먼 한 점에 화면을 향한 사각형으로 그린다(farImage.ts).
+ * 원근 식(toScreen)은 입자와 같아서 카메라가 돌면 먼 별처럼 함께 움직인다.
+ * 프레임은 네 장까지 섞는다: 지금 시각의 두 장(사이를 섞어 느려도 부드럽게) · 이어 붙이는 구간의 두 장.
+ * 은하는 기울어진 원반이라, 그림을 원반 면을 따라 돌려 제자리에서 천천히 도는 것처럼 보이게 한다(이음매 없이 계속 돈다).
+ * 사진처럼 보이지 않도록 푸른 바탕 · 어두운 바탕을 누르고, 색을 빼고, 가장자리와 잘린 아래쪽을 어둠으로 풀어 준다.
+ */
+export const FAR_VERTEX = /* glsl */ `#version 300 es
+precision highp float;
+${PROJECTION}
+uniform vec3 uCenter;       // 놓이는 자리(world)
+uniform vec2 uSize;         // 가로 · 세로 크기(world)
+uniform vec4 uDisk;         // xy: 그림 안에서 은하 중심(0 ~ 1), z: 원반 긴 축의 방향(라디안), w: 짧은 축 / 긴 축
+out vec2 vUv;
+out float vFade;
+
+void main() {
+  // 사각형의 네 꼭짓점(TRIANGLE_STRIP): 왼쪽 위 · 오른쪽 위 · 왼쪽 아래 · 오른쪽 아래
+  vec2 corner = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1)) * 2.0 - 1.0;
+  float depth;
+  float scale;
+  vec2 screen = toScreen(uCenter, depth, scale);
+  // 은하 중심이 놓이는 자리의 한가운데에 오게 한다
+  vUv = corner * 0.5 + uDisk.xy;
+  vFade = smoothstep(uNear, uNear * 9.0, depth);
+  if (depth < uNear) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    return;
+  }
+  gl_Position = toClip(screen + corner * uSize * 0.5 * scale);
+}
+`
+
+export const FAR_FRAGMENT = /* glsl */ `#version 300 es
+precision highp float;
+precision highp sampler2DArray;
+uniform sampler2DArray uFrames;
+uniform vec4 uLayers;       // x y: 지금 시각의 두 장, z w: 이어 붙이는 구간의 두 장
+uniform vec3 uWeights;      // x: 앞 두 장 사이, y: 뒤 두 장 사이, z: 앞(1) ~ 뒤(0) 사이
+uniform vec4 uTone;         // x: 검은 바탕 밝기, y: 채도, z: 밝기 배율, w: 나타난 정도
+uniform vec2 uMask;         // 가장자리를 지우는 범위(중심에서의 거리, 가장자리 = 1)
+uniform vec4 uDisk;         // xy: 그림 안에서 은하 중심(0 ~ 1), z: 원반 긴 축의 방향(라디안), w: 짧은 축 / 긴 축
+uniform vec2 uSpin;         // x: 원반 면에서 돈 각도(라디안), y: 그림의 가로 / 세로
+uniform float uCoolKey;     // 푸른 바탕을 누르는 정도(0 ~ 1)
+uniform float uContrast;    // 어두운 쪽을 누르는 곡선의 세기(1이면 그대로)
+uniform vec2 uBottomFade;   // 아래쪽을 어둠으로 풀어 주는 범위(그림 높이 비율). x >= y면 풀지 않는다
+in vec2 vUv;
+in float vFade;
+out vec4 outColor;
+
+// 원반 면에서 angle만큼 돌린 자리를 그림의 좌표로 돌려준다: 원반 축으로 돌려 짧은 축을 펴고, 돌린 뒤 다시 눌러 기울인다
+vec2 spinOnDisk(vec2 uv, float angle) {
+  vec2 aspect = vec2(uSpin.y, 1.0);
+  vec2 p = (uv - uDisk.xy) * aspect;
+  float c = cos(uDisk.z), s = sin(uDisk.z);
+  vec2 disk = vec2(c * p.x + s * p.y, (-s * p.x + c * p.y) / uDisk.w);
+  float ca = cos(angle), sa = sin(angle);
+  disk = vec2(ca * disk.x - sa * disk.y, sa * disk.x + ca * disk.y);
+  disk.y *= uDisk.w;
+  p = vec2(c * disk.x - s * disk.y, s * disk.x + c * disk.y);
+  return uDisk.xy + p / aspect;
+}
+
+void main() {
+  vec2 uv = spinOnDisk(vUv, uSpin.x);
+  vec3 now = mix(texture(uFrames, vec3(uv, uLayers.x)).rgb, texture(uFrames, vec3(uv, uLayers.y)).rgb, uWeights.x);
+  vec3 seam = mix(texture(uFrames, vec3(uv, uLayers.z)).rgb, texture(uFrames, vec3(uv, uLayers.w)).rgb, uWeights.y);
+  vec3 color = mix(seam, now, uWeights.z);
+  // 푸른 바탕(파란빛이 붉은빛보다 센 곳)을 어둠으로 누른다. 따뜻한 먼지 · 빛나는 가장자리 · 별은 남는다
+  float cool = clamp((color.b - color.r) * 4.0, 0.0, 1.0);
+  color *= 1.0 - uCoolKey * cool;
+  // 바탕을 검정으로 눌러 빛만 남기고, 색을 빼고, 가장자리를 둥글게 지운다(사각 사진의 테두리가 보이지 않게)
+  color = max(color - uTone.x, 0.0) / (1.0 - uTone.x);
+  // 곡선으로 한 번 더 눌러, 옅게 남은 바탕(안개)은 0으로 사라지고 밝은 곳만 남게 한다.
+  // 바탕이 조금이라도 남으면 둥글게 지운 모양이 그대로 '밝은 원판'으로 보인다
+  float light = max(max(color.r, color.g), color.b);
+  color *= pow(max(light, 1e-4), uContrast - 1.0);
+  float gray = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color = mix(vec3(gray), color, uTone.y) * uTone.z;
+  float edge = length(vUv - uDisk.xy) * 2.0;
+  float mask = 1.0 - smoothstep(uMask.x, uMask.y, edge);
+  // 잘린 아래쪽은 아래로 갈수록 어둠으로 흩어져 사라지게 한다
+  if (uBottomFade.y > uBottomFade.x) mask *= 1.0 - smoothstep(uBottomFade.x, uBottomFade.y, vUv.y);
+  color *= mask * uTone.w * vFade;
+  outColor = vec4(color, max(max(color.r, color.g), color.b));
+}
+`

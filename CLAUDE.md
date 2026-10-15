@@ -157,6 +157,7 @@ config/motion.ts ─ motionStore(설정 · 저장 · 시스템 '동작 줄이기
 - **배경 별 · 별빛 단계 · 별똥별**(설정 → Space → 별빛): 값은 `config/space.ts`의 `particles.stars`(별가루 · 반짝이는 별 · 빛살, `levels`가 생동감 단계) · `particles.meteors`. 고른 단계와 별똥별 켜짐은 `store/skyStore`(localStorage). 움직임에는 Background Motion이 곱해져 동작 줄이기에서는 멈춘다.
 - **가만히 있을 때의 카메라**(설정 → Space → 카메라): 메인 화면에서 입력이 없으면 카메라가 성단을 둘러보며 떠돈다(`camera/cameraRig`의 `driftIdle`). 단계별 빠르기 · 범위와 방향을 바꾸는 주기는 `config/space.ts`의 `camera.idleOrbit`, 고른 단계는 `store/skyStore`의 `orbit`. 성단 안에서도 떠돌며(`clusterReach`로 줄임), 회전의 중심은 옮기지 않고 카메라만 비켜선다.
 - **배경 파노라마**(가장 뒤 레이어): 이미지는 `public/space/`(정거원통 2:1), 경로 · 밝기 · 채도 · 정면 위치는 `config/space.ts`의 `particles.backdrop`. 카메라 방향만 따르고 이동 · 확대에는 움직이지 않는다. 터치 기기는 `srcLow`를 쓴다.
+- **먼 곳의 은하 · 성운**(작은 그림들): 그림은 `public/space/`, 목록 · 방향 · 크기 · 바탕 처리는 `config/space.ts`의 `particles.farImages`(한 항목 = 그림 하나). 파노라마처럼 하늘에 붙어 방향만 따른다(`environment/farImage.ts`, 셰이더 `FAR_*`).
 - **빛 · Hover 반응만 바꾸기**: `features/space/effects/*.css`. 동작은 그대로 남는다.
 - **커서에 반응하는 거리 · 성단의 숨 · 시차의 크기**: `config/space.ts`의 `interaction.cluster*` · `breath` · `particles.aware` · `camera.parallaxShiftPx`.
 - **작품 ↔ 상세 화면 전환의 시간 · 가감속**: `config/motion.ts`의 `projectMotion.travel` · `travelEase`.

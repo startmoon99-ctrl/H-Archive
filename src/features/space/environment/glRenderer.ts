@@ -3,6 +3,8 @@ import { PARTICLE_STRIDE } from './particleField'
 import {
   BACKDROP_FRAGMENT,
   BACKDROP_VERTEX,
+  FAR_FRAGMENT,
+  FAR_VERTEX,
   LINE_FRAGMENT,
   LINE_VERTEX,
   POINT_FRAGMENT,
@@ -87,6 +89,32 @@ export interface BackdropUniforms {
   tone: [number, number, number]
 }
 
+/** 아주 먼 곳의 그림(은하 · 성운) 하나를 그리는 값. farImage.ts가 만든다 */
+export interface FarImageUniforms {
+  /** setFarFrames로 올린 텍스처의 이름 */
+  id: string
+  /** 놓이는 자리(world)와 가로 · 세로 크기(world) */
+  center: [number, number, number]
+  size: [number, number]
+  /** 섞어 그릴 프레임 네 장(지금 시각의 두 장 · 이어 붙이는 구간의 두 장)과 그 비율 */
+  layers: [number, number, number, number]
+  weights: [number, number, number]
+  /** 검은 바탕 밝기 · 채도 · 밝기 배율 · 나타난 정도 */
+  tone: [number, number, number, number]
+  /** 가장자리를 지우는 범위 */
+  mask: [number, number]
+  /** 그림 안 은하 원반: 중심(0 ~ 1) · 긴 축의 방향(라디안) · 짧은 축 / 긴 축 */
+  disk: [number, number, number, number]
+  /** 원반 면에서 돈 각도(라디안)와 그림의 가로 / 세로 */
+  spin: [number, number]
+  /** 푸른 바탕을 누르는 정도(0 ~ 1) */
+  coolKey: number
+  /** 어두운 쪽을 누르는 곡선의 세기(1이면 그대로, 클수록 옅은 바탕이 0으로 사라지고 밝은 곳만 남는다) */
+  contrast: number
+  /** 아래쪽을 어둠으로 풀어 주는 범위(그림 높이 비율, 앞 값부터 뒤 값까지). 앞 값이 뒤 값 이상이면 풀지 않는다 */
+  bottomFade: [number, number]
+}
+
 export interface GlRenderer {
   /** 화면 크기(CSS px)와 실제로 그릴 해상도 배율 */
   resize(width: number, height: number, ratio: number): void
@@ -95,6 +123,8 @@ export interface GlRenderer {
   readonly maxTextureSize: number
   /** 가장 뒤의 파노라마(정거원통). null이면 그리지 않는다 */
   setBackdrop(image: TexImageSource | null): void
+  /** 먼 곳의 그림 id의 프레임들(모두 같은 크기). 빈 배열이면 지운다 */
+  setFarFrames(id: string, frames: ImageBitmap[]): void
   /**
    * @param particleFraction 0 ~ 1. 품질 단계에 따라 입자의 일부만 그린다
    * @param meteor 별똥별(meteors.ts)의 빛줄기 · 빛살. 꼭짓점이 없으면 그리지 않는다
@@ -106,6 +136,7 @@ export interface GlRenderer {
     lineVertices: number,
     meteor: MeteorFrame,
     backdrop: BackdropUniforms,
+    far: FarImageUniforms[],
   ): void
   dispose(): void
 }
@@ -155,6 +186,10 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer | null {
   // 꼭짓점을 gl_VertexID로 만드므로 속성 없는 빈 묶음이면 된다
   const backdropArray = gl.createVertexArray()
   let backdropTexture: WebGLTexture | null = null
+  const farProgram = link(gl, FAR_VERTEX, FAR_FRAGMENT)
+  const farUniform = uniformLookup(gl, farProgram)
+  /** 먼 곳의 그림마다 프레임을 담은 텍스처 배열 */
+  const farTextures = new Map<string, WebGLTexture>()
   const pointProgram = link(gl, POINT_VERTEX, POINT_FRAGMENT)
   const lineProgram = link(gl, LINE_VERTEX, LINE_FRAGMENT)
   const streakProgram = link(gl, STREAK_VERTEX, STREAK_FRAGMENT)
@@ -247,7 +282,29 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer | null {
       gl.bindTexture(gl.TEXTURE_2D, null)
     },
 
-    draw(frame, particleFraction, lines, lineVertices, meteor, backdrop) {
+    setFarFrames(id, frames) {
+      const previous = farTextures.get(id)
+      if (previous) gl.deleteTexture(previous)
+      farTextures.delete(id)
+      if (frames.length === 0) return
+      const { width, height } = frames[0]
+      const texture = gl.createTexture()
+      farTextures.set(id, texture)
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture)
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
+      gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA, width, height, frames.length, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+      frames.forEach((image, layer) => {
+        gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, width, height, 1, gl.RGBA, gl.UNSIGNED_BYTE, image)
+      })
+      gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, null)
+    },
+
+    draw(frame, particleFraction, lines, lineVertices, meteor, backdrop, far) {
       gl.clear(gl.COLOR_BUFFER_BIT)
 
       // 가장 뒤의 파노라마: 입자 · 선보다 먼저 화면 전체를 칠한다
@@ -266,6 +323,31 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer | null {
         gl.bindVertexArray(backdropArray)
         gl.drawArrays(gl.TRIANGLES, 0, 3)
         gl.bindTexture(gl.TEXTURE_2D, null)
+      }
+
+      // 아주 먼 곳의 그림들(은하 · 성운): 파노라마 위, 입자 · 선 아래
+      for (const image of far) {
+        const texture = farTextures.get(image.id)
+        if (!texture || image.tone[3] <= 0) continue
+        gl.useProgram(farProgram)
+        setProjection(farUniform, frame)
+        gl.activeTexture(gl.TEXTURE0)
+        gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture)
+        gl.uniform1i(farUniform('uFrames'), 0)
+        gl.uniform3fv(farUniform('uCenter'), image.center)
+        gl.uniform2fv(farUniform('uSize'), image.size)
+        gl.uniform4fv(farUniform('uLayers'), image.layers)
+        gl.uniform3fv(farUniform('uWeights'), image.weights)
+        gl.uniform4fv(farUniform('uTone'), image.tone)
+        gl.uniform2fv(farUniform('uMask'), image.mask)
+        gl.uniform4fv(farUniform('uDisk'), image.disk)
+        gl.uniform2fv(farUniform('uSpin'), image.spin)
+        gl.uniform1f(farUniform('uCoolKey'), image.coolKey)
+        gl.uniform1f(farUniform('uContrast'), image.contrast)
+        gl.uniform2fv(farUniform('uBottomFade'), image.bottomFade)
+        gl.bindVertexArray(backdropArray)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        gl.bindTexture(gl.TEXTURE_2D_ARRAY, null)
       }
 
       if (lineVertices > 0) {
@@ -350,6 +432,8 @@ export function createGlRenderer(canvas: HTMLCanvasElement): GlRenderer | null {
       gl.deleteProgram(lineProgram)
       gl.deleteProgram(streakProgram)
       gl.deleteProgram(backdropProgram)
+      gl.deleteProgram(farProgram)
+      farTextures.forEach((texture) => gl.deleteTexture(texture))
       gl.deleteVertexArray(backdropArray)
       if (backdropTexture) gl.deleteTexture(backdropTexture)
     },

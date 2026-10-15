@@ -342,6 +342,199 @@ export const spaceConfig = {
       fadeInMs: 2000,
     },
     /**
+     * 아주 먼 곳의 그림들(은하 · 성운). 배경 파노라마처럼 하늘에 붙어 있어(카메라가 어디에 있든 그 방향의 아주 먼 곳)
+     * 이동 · 확대에는 움직이지 않고 카메라의 방향만 따른다. 그래서 평면 사진이 가까이 떠 있는 것처럼 보이지 않는다.
+     * 사진처럼 보이지 않도록 바탕을 검정으로 누르고(coolKey는 푸른 바탕까지), 색을 빼고, 가장자리를 둥글게 지우고,
+     * 잘린 아래쪽은 bottomFade로 어둠에 흩어지게 한 뒤 빛을 더하는 방식으로 옅게 그린다(environment/farImage.ts).
+     * 그림은 public/space에 둔다. 움직이는 WebP는 끝과 처음을 crossfadeFrames만큼 겹쳐 이어 붙이고 slow배 느리게 재생한다.
+     * 움직임에는 Background Motion이 곱해진다(동작 줄이기에서는 멈춘다).
+     *
+     * 값: yawDeg · pitchDeg 놓이는 방향(처음 구도의 정면 기준, 도. 왼쪽 · 위가 +) · distance 거리(world, 하늘에 붙어 있어
+     * 크기를 정하는 데만 쓴다) · size 가로 크기(world) · slow 재생 배수 · spinDegPerSec 원반 면을 따라 도는 빠르기
+     * (도/초, 0이면 돌지 않는다) · textureSize(Low) 줄여서 올리는 긴 변(px, 터치 기기는 Low) · blackLevel 검정으로 볼 밝기
+     * · saturation 채도 · brightness 밝기 배율 · coolKey 푸른 바탕을 누르는 정도 · contrast 어두운 쪽을 누르는 곡선(1이면 그대로, 클수록 옅은 바탕이 사라지고 밝은 곳만 남는다) · mask 가장자리를 지우는 범위(중심에서의
+     * 거리, 가장자리 = 1) · bottomFade 아래쪽을 풀어 주는 범위(그림 높이 비율, 같으면 풀지 않는다)
+     */
+    farImages: [
+      {
+        /** 천천히 도는 작은 은하(움직이는 WebP). 정면 왼쪽 위 */
+        id: 'galaxy',
+        enabled: true,
+        src: '/space/galaxy_loop_tail_fade.webp',
+        yawDeg: 24,
+        pitchDeg: 12,
+        distance: 10000,
+        size: 660,
+        slow: 3,
+        spinDegPerSec: 12,
+        crossfadeFrames: 12,
+        textureSize: 320,
+        textureSizeLow: 220,
+        blackLevel: 0.07,
+        saturation: 0.3,
+        brightness: 0.6,
+        coolKey: 0,
+        contrast: 1,
+        mask: [0.25, 0.9],
+        bottomFade: [1, 1],
+        fadeInMs: 3000,
+      },
+      {
+        /**
+         * 창조의 기둥(NASA · ESA 허블). 푸른 바탕을 걷어 내고 잘린 아래쪽을 어둠에 흩는다.
+         * 원래 밝고 눈에 띄므로 조금 더 멀리(작게) 두고 옅게 그린다. 걷어 낸 바탕이 옅게 남으면 둥근 판처럼
+         * 보이므로 contrast로 살짝 눌러 기둥의 윤곽을 남긴다. 첫 화면 · 둘러보기 범위 밖인 오른쪽 뒤편에 있어 크게 돌려야 만난다
+         */
+        id: 'pillars',
+        enabled: true,
+        src: '/space/pillars_nebula.jpg',
+        yawDeg: -110,
+        pitchDeg: 12,
+        distance: 14000,
+        size: 560,
+        slow: 1,
+        spinDegPerSec: 0,
+        crossfadeFrames: 0,
+        textureSize: 384,
+        textureSizeLow: 256,
+        blackLevel: 0.12,
+        saturation: 0.25,
+        brightness: 0.65,
+        coolKey: 0.9,
+        contrast: 1.3,
+        mask: [0.35, 0.95],
+        bottomFade: [0.45, 0.92],
+        fadeInMs: 3000,
+      },
+      {
+        /** 거의 정면으로 보이는 나선은하(NASA · ESA 허블). 회색 안개 바탕을 누르고 아주 느리게 돈다. 정면 바깥 왼쪽 아래 */
+        id: 'spiral',
+        enabled: true,
+        src: '/space/spiral_galaxy.jpg',
+        yawDeg: 40,
+        pitchDeg: -15,
+        distance: 10000,
+        size: 620,
+        slow: 1,
+        spinDegPerSec: 3,
+        crossfadeFrames: 0,
+        textureSize: 512,
+        textureSizeLow: 384,
+        blackLevel: 0.12,
+        saturation: 0.3,
+        brightness: 0.7,
+        coolKey: 0,
+        contrast: 1,
+        mask: [0.3, 0.92],
+        bottomFade: [1, 1],
+        fadeInMs: 3000,
+      },
+      {
+        /** 나선 성운(NASA · ESA 허블). 색이 아주 짙어 채도를 많이 뺀다. 정면 바깥 오른쪽 */
+        id: 'helix',
+        enabled: true,
+        src: '/space/helix_nebula.jpg',
+        yawDeg: -48,
+        pitchDeg: -8,
+        distance: 10000,
+        size: 520,
+        slow: 1,
+        spinDegPerSec: 0,
+        crossfadeFrames: 0,
+        textureSize: 512,
+        textureSizeLow: 384,
+        blackLevel: 0.05,
+        saturation: 0.18,
+        brightness: 0.7,
+        coolKey: 0,
+        contrast: 1,
+        mask: [0.3, 0.95],
+        bottomFade: [1, 1],
+        fadeInMs: 3000,
+      },
+      {
+        /**
+         * 거품 성운(NASA · ESA 허블). 화면 가득 청록 · 주황 가스가 차 있어, 가운데 둥근 거품만 남기고
+         * 둘레의 가스는 contrast · 좁은 mask로 어둠에 녹인다. 정면 바깥 왼쪽 위
+         */
+        id: 'bubble',
+        enabled: true,
+        src: '/space/bubble_nebula.jpg',
+        focus: [0.58, 0.6],
+        yawDeg: 70,
+        pitchDeg: 24,
+        distance: 12000,
+        size: 640,
+        slow: 1,
+        spinDegPerSec: 0,
+        crossfadeFrames: 0,
+        textureSize: 512,
+        textureSizeLow: 384,
+        blackLevel: 0.16,
+        saturation: 0.2,
+        brightness: 0.7,
+        coolKey: 0,
+        contrast: 1.25,
+        mask: [0.18, 0.72],
+        bottomFade: [1, 1],
+        fadeInMs: 3000,
+      },
+      {
+        /**
+         * 밝은 별과 그 곁을 지나는 먼지 띠(상상도). 그림 속 행성은 어두운 몸체가 바탕과 함께 눌려 거의 보이지 않고
+         * 별빛 쪽에 초점을 둔다. 정면 뒤편
+         */
+        id: 'starDust',
+        enabled: true,
+        src: '/space/star_and_dust.jpg',
+        focus: [0.66, 0.54],
+        yawDeg: 165,
+        pitchDeg: -4,
+        distance: 12000,
+        size: 760,
+        slow: 1,
+        spinDegPerSec: 0,
+        crossfadeFrames: 0,
+        textureSize: 512,
+        textureSizeLow: 384,
+        blackLevel: 0.12,
+        saturation: 0.2,
+        brightness: 0.55,
+        coolKey: 0,
+        contrast: 1.5,
+        mask: [0.2, 0.8],
+        bottomFade: [1, 1],
+        fadeInMs: 3000,
+      },
+      {
+        /**
+         * 블랙홀 쌍성을 둘러싼 밝은 원반(상상도, 원본은 TIFF). 원반이 아주 밝고 양옆이 잘려 있어 많이 어둡게 하고
+         * 원반 중심을 기준으로 둥글게 지운다. 정면 바깥 오른쪽 아래
+         */
+        id: 'quasar',
+        enabled: true,
+        src: '/space/binary_quasar.jpg',
+        focus: [0.47, 0.5],
+        yawDeg: -72,
+        pitchDeg: -24,
+        distance: 12000,
+        size: 760,
+        slow: 1,
+        spinDegPerSec: 0,
+        crossfadeFrames: 0,
+        textureSize: 512,
+        textureSizeLow: 384,
+        blackLevel: 0.08,
+        saturation: 0.2,
+        brightness: 0.28,
+        coolKey: 0,
+        contrast: 1.4,
+        mask: [0.2, 0.78],
+        bottomFade: [1, 1],
+        fadeInMs: 3000,
+      },
+    ],
+    /**
      * 배경 점과 먼지가 퍼지는 범위를 이 간격(world)으로 끊어 잡는다. 성단을 조금 옮겨도 범위가 그대로라
      * 입자를 다시 만들 때 배경이 튀지 않는다(성단 위치 조절)
      */

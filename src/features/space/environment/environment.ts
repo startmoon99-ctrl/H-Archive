@@ -8,6 +8,7 @@ import { createQualityGovernor, renderRatio } from '../effects/quality'
 import type { MovingCluster } from '../scene/arrangement'
 import type { SpaceLayout } from '../scene/layout'
 import { createGlRenderer } from './glRenderer'
+import { createFarImage } from './farImage'
 import { createMeteors } from './meteors'
 import { buildParticleField } from './particleField'
 import { MAX_COVERS, MAX_MOVES } from './shaders'
@@ -75,6 +76,8 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
   const lineColor = readColorToken('--particle-thread')
   const streakColor = readColorToken('--particle-star')
   const meteors = createMeteors()
+  // 아주 먼 곳의 그림들(은하 · 성운). 하늘에 붙어 카메라의 방향만 따른다
+  const farImages = config.farImages.map((image) => createFarImage(renderer, touchDevice, image))
   /** 가장 뒤의 파노라마를 올린 시각(나타나는 정도의 기준). 아직 없으면 -1 */
   let backdropAt = -1
   let disposed = false
@@ -275,6 +278,7 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
             backdropAt < 0 ? 0 : smoothstep((now - backdropAt) / backdropConfig.fadeInMs),
           ],
         },
+        farImages.flatMap((image) => image.update(dt, now, background) ?? []),
       )
     },
 
@@ -285,6 +289,7 @@ export function createEnvironment(canvas: HTMLCanvasElement, touchDevice: boolea
 
     dispose() {
       disposed = true
+      for (const image of farImages) image.dispose()
       renderer.dispose()
     },
   }
