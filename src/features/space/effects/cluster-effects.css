@@ -37,15 +37,15 @@
   scale: calc(1 + var(--breath) * 0.05 + var(--near) * 0.1);
 }
 
-/* 다가가면 열리는 가는 고리. 중심보다 덜 기울어 중심이 커서를 바라보는 것처럼 보인다 */
+/*
+ * 가는 고리는 성단 위치 조절에서만 보인다(잡을 수 있는 손잡이, 아래 data-arranging).
+ * 평소에는 커서가 다가와도 고리 없이 중심의 빛과 이름만 반응한다.
+ */
 .cluster .cluster__ring {
-  border: 1px solid rgb(var(--light-rgb) / calc(0.07 + var(--sense) * 0.05 + var(--near) * 0.26));
+  border: 1px solid transparent;
+  opacity: 0;
   translate: calc(-50% + var(--lean-x) * 0.4px) calc(-50% + var(--lean-y) * 0.4px);
   transition: opacity var(--dur-slow) var(--ease-standard);
-}
-
-.cluster[data-state='focused'] .cluster__ring {
-  opacity: 0;
 }
 
 /* 이름은 어둠 속에 옅게 놓여 있다가 커서가 다가오는 만큼 떠오른다 */
@@ -89,6 +89,7 @@
 
 .space[data-arranging='true'] .cluster .cluster__ring {
   border-color: rgb(var(--light-rgb) / calc(0.18 + var(--near) * 0.3));
+  opacity: 1;
 }
 
 .space[data-arranging='true'] .cluster__halo,

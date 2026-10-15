@@ -91,21 +91,52 @@ export const spaceConfig = {
      * 움직임에는 Background Motion이 곱해진다(동작 줄이기에서는 움직이지 않는다).
      */
     idleOrbit: {
-      /** 마지막 입력(끌기 · 휠 · 마우스 이동 · 이동)에서 이만큼 지나면 시작한다(ms) */
-      delayMs: 6000,
-      /** 시작할 때 천천히 붙는 시간 · 입력이 들어와 멈출 때 떨어지는 시간(ms) */
-      easeInMs: 5000,
+      /**
+       * 조작(끌기 · 휠 · 누름 · 화면 이동)을 마친 뒤 다시 떠돌기까지(ms). 0이면 손을 떼자마자 이어진다.
+       * 끄는 동안과 놓은 뒤 미끄러지는 동안은 멈춰 있고, 마우스를 움직이기만 하면 멈추지 않는다
+       */
+      delayMs: 0,
+      /** 다시 떠돌 때 천천히 붙는 시간 · 조작이 들어와 멈출 때 떨어지는 시간(ms) */
+      easeInMs: 2500,
       easeOutMs: 500,
-      /** 도는 빠르기(도/초, 좌우 기준. 위아래는 범위 비율만큼 느리다) */
-      speedDegPerSec: 0.8,
-      /** 가만히 있기 시작한 각도에서 벗어나는 범위(도). 이 안에서 성단을 바라보며 떠돈다 */
-      yawRangeDeg: 45,
-      pitchRangeDeg: 15,
       /** 이만큼마다 방향을 새로 정하고(초), 새 방향으로 돌아서는 시간(ms, 이 시간의 약 3배에 걸쳐 다 돈다) */
       turnEverySec: 60,
       turnMs: 4000,
       /** 새 방향이 지금 방향과 이 각도(도) 이상 달라지게 고른다 */
       minTurnDeg: 45,
+      /** 범위의 이 비율을 넘어 바깥으로 가고 있으면 1분이 되기 전에도 안쪽으로 휘어 돌아온다 */
+      edge: 0.75,
+      /** 다가갔다 물러나는 한 번의 주기(초) */
+      breathSec: 50,
+      /**
+       * 옆으로 돌아간 만큼 뒤로 물러나는 정도(범위 끝에서 배율이 줄어드는 비율). 옆에서 보면 원근으로 바깥 성단이
+       * 화면 밖으로 밀려나므로, 실제 카메라처럼 조금 물러나 성단을 화면 안에 둔다. 돌아오면 다시 다가간다
+       */
+      pullBack: 0.16,
+      /** 물러나는 정도가 바뀔 때 따라가는 시간(ms). 직접 돌린 뒤 새 중심에서 다시 다가갈 때 배율이 튀지 않게 한다 */
+      pullFollowMs: 2500,
+      /**
+       * 성단 안(작품이 둘레에 놓인 화면)에서 범위 · 빠르기 · 옆으로 떠가는 거리에 곱하는 배율.
+       * 작품이 화면을 채운 구도라 메인 화면만큼 돌면 바깥 작품이 화면 밖으로 밀려나므로 줄인다
+       */
+      clusterReach: 0.85,
+      /**
+       * 움직임의 단계(설정 → Space → 카메라). defaultLevel이 처음 값이다.
+       * speedDegPerSec: 도는 빠르기(도/초, 좌우 기준. 위아래는 범위 비율만큼 느리다)
+       * yawRangeDeg / pitchRangeDeg: 가만히 있기 시작한 각도에서 벗어나는 범위(도). 이 안에서 성단을 바라보며 떠돈다
+       * driftRangePx: 도는 동안 함께 옆으로 떠가는 거리의 상한(초점면에서의 px). 각도가 범위 끝에 갈수록 이만큼 옮겨 가
+       *   성단 무리도 배경과 같은 쪽으로 흐르고, 각도가 돌아오면 함께 돌아온다(화면 밖으로 밀려나지 않는다)
+       * breath: 아주 느리게 다가갔다 물러나는 정도(배율의 ± 비율)
+       */
+      levels: [
+        { label: '멈춤', speedDegPerSec: 0, yawRangeDeg: 45, pitchRangeDeg: 15, driftRangePx: 0, breath: 0 },
+        { label: '잔잔하게', speedDegPerSec: 0.8, yawRangeDeg: 45, pitchRangeDeg: 15, driftRangePx: 30, breath: 0.02 },
+        { label: '천천히 둘러보기', speedDegPerSec: 2.2, yawRangeDeg: 55, pitchRangeDeg: 18, driftRangePx: 60, breath: 0.03 },
+        { label: '둘러보기', speedDegPerSec: 4, yawRangeDeg: 60, pitchRangeDeg: 20, driftRangePx: 90, breath: 0.03 },
+        { label: '크게 둘러보기', speedDegPerSec: 6, yawRangeDeg: 70, pitchRangeDeg: 24, driftRangePx: 120, breath: 0.04 },
+      ],
+      /** 처음 단계: 성단 사이를 천천히 둘러보는 정도(기본 모션 설정에서 약 3도/초) */
+      defaultLevel: 3,
     },
   },
 
